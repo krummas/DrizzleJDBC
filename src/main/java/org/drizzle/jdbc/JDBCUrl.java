@@ -53,41 +53,58 @@ public class JDBCUrl {
         this.database = database;
     }
 
-    public static JDBCUrl parse(final String url) {
-        final DBType dbType;
-        final String username;
-        final String password;
-        final String hostname;
-        final int port;
-        final String database;        
-
-        final Pattern p = Pattern.compile("^jdbc:(drizzle|mysql:thin)://((\\w+)(:(\\w*))?@)?([^/:]+)(:(\\d+))?(/(\\w+))?");
-        final Matcher m = p.matcher(url);
-        if (m.find()) {
-            if (m.group(1).equals("mysql:thin")) {
-                dbType = DBType.MYSQL;
-            } else {
-                dbType = DBType.DRIZZLE;
-            }
-
-            username = (m.group(3) == null ? "" : m.group(3));
-            password = (m.group(5) == null ? "" : m.group(5));
-            hostname = (m.group(6) == null ? "" : m.group(6));
-            if (m.group(8) != null) {
-                port = Integer.parseInt(m.group(8));
-            } else {
-                if (dbType == DBType.DRIZZLE) {
-                    port = 3306;
-                } else {
-                    port = 3306;
-                }
-            }
-            database = m.group(10);
-            return new JDBCUrl(dbType, username, password, hostname, port, database);
+    public static JDBCUrl parse(String url) {
+        DBType dbType;
+        if (url.indexOf("jdbc:mysql:thin://") != -1) {
+            dbType = DBType.MYSQL;
+            url = url.substring("jdbc:mysql:thin://".length());
+        } else if (url.indexOf("jdbc:drizzle://") != -1) {
+            dbType = DBType.DRIZZLE;
+            url = url.substring("jdbc:drizzle://".length());
         } else {
             return null;
         }
-    }
+
+        String hostname;
+        int port = (dbType == DBType.DRIZZLE) ? 3306 : 3306;
+        String username = "";
+        String password = "";
+        String database;
+
+        int atSignIndex = url.indexOf("@");
+        if (atSignIndex != -1) {
+            String userPassCombo = url.substring(0, atSignIndex);
+            url = url.substring(atSignIndex+1);
+
+            int userPassDividerIndex = userPassCombo.indexOf(":");
+            if (userPassDividerIndex == -1) {
+                username = userPassCombo;
+            } else {
+                username = userPassCombo.substring(0, userPassDividerIndex);
+                password = userPassCombo.substring(userPassDividerIndex+1);
+            }
+        }
+        int hostPortDividerIndex = url.indexOf(":");
+        if (hostPortDividerIndex == -1) {
+            int slashIndex = url.indexOf("/");
+            hostname = url.substring(0, slashIndex);
+            url = url.substring(slashIndex+1);
+        } else {
+            hostname = url.substring(0, hostPortDividerIndex);
+            url = url.substring(hostPortDividerIndex+1);
+            int slashIndex = url.indexOf("/");
+            port = Integer.parseInt(url.substring(0, slashIndex));
+            url = url.substring(slashIndex+1);
+        }
+        int slashIndex = url.indexOf("/");
+        if (slashIndex == -1) {
+            database = url;
+        } else {
+            database = url.substring(0, slashIndex);
+        }
+        return new JDBCUrl(dbType, username, password, hostname, port, database);
+   }
+
     public String getUsername() {
         return username;
     }

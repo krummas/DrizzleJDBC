@@ -376,6 +376,13 @@ public class DriverTest {
         assertEquals("bbb",url.getDatabase());
         assertEquals(JDBCUrl.DBType.MYSQL, url.getDBType());
 
+        url = JDBCUrl.parse("jdbc:mysql:thin://wh-oa:pa-ss@www.driz-zle.org/bb-b/");
+        assertEquals("wh-oa",url.getUsername());
+        assertEquals("pa-ss",url.getPassword());
+        assertEquals("www.driz-zle.org",url.getHostname());
+        assertEquals(3306,url.getPort());
+        assertEquals("bb-b",url.getDatabase());
+        assertEquals(JDBCUrl.DBType.MYSQL, url.getDBType());
     }
 
     @Test
