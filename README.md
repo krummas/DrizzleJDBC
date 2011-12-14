@@ -5,11 +5,11 @@ A BSD Licensed JDBC driver for MySQL and Drizzle.
 Maven
 -----
 
-  <dependency>
-    <groupId>org.drizzle.jdbc</groupId>
-    <artifactId>drizzle-jdbc</artifactId>
-    <version>1.1</version>
-  </dependency>
+    <dependency>
+        <groupId>org.drizzle.jdbc</groupId>
+        <artifactId>drizzle-jdbc</artifactId>
+        <version>1.1</version>
+    </dependency>
 
 
 Connection string
