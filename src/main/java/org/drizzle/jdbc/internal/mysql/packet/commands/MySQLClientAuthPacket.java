@@ -75,11 +75,10 @@ public class MySQLClientAuthPacket implements CommandPacket {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("Could not use SHA-1, failing", e);
         }
-        final int packetLength =
-                4 + 4 + 1 + 23 + username.length() + 1 + scrambledPassword.length + 1 + database.length() + 1;
+
         final byte serverLanguage = 33;
         writeBuffer.writeInt(MySQLServerCapabilities.fromSet(serverCapabilities)).
-                writeInt(packetLength).
+                writeInt(0xffffff).
                 writeByte(serverLanguage). //1
                 writeBytes((byte) 0, 23).    //23
                 writeString(username).     //strlen username
