@@ -198,7 +198,7 @@ public class MySQLProtocol implements Protocol {
 
             // If a database is given, but createDB is not defined or is false,
             // then just try to connect to the given database
-            if (this.database != null && !createDB())
+            if (this.database != null && !this.database.equals("") && !createDB())
                 capabilities.add(MySQLServerCapabilities.CONNECT_WITH_DB);
 
             final MySQLClientAuthPacket cap = new MySQLClientAuthPacket(this.username,
