@@ -20,6 +20,19 @@ or
 
 `jdbc:mysql:thin://<user>@<host>:<port>/<database>`
 
+Connection options
+------------------
+Connection options are appended to the connection string, like a http url.
+
+Current supported options are;
+
+* `useSSL=true` - use ssl to connect (you need to do some java ssl magic to get it to work, look at the mysql documentation)
+* `allowMultiQueries=true` - allow sending several queries in one round trip to the server
+* `connectTimeout=X` - have an X second connection timeout.
+* `createDB=true` - create the given database if it does not exist when connecting.
+* `enableBlobStreaming=true` - experimental support for PBMS blob streaming.
+
+
 Building and testing
 --------------------
 To test you need to have:
