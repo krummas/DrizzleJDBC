@@ -200,7 +200,9 @@ public class MySQLProtocol implements Protocol {
             // then just try to connect to the given database
             if (this.database != null && !this.database.equals("") && !createDB())
                 capabilities.add(MySQLServerCapabilities.CONNECT_WITH_DB);
-
+            if (info.getProperty("useAffectedRows", "false").equals("false")) {
+                capabilities.add(MySQLServerCapabilities.FOUND_ROWS);
+            }
             final MySQLClientAuthPacket cap = new MySQLClientAuthPacket(this.username,
                     this.password,
                     this.database,
