@@ -12,8 +12,18 @@ import java.sql.Statement;
 public class LoadTest {
     @Test    
     public void tm() throws SQLException {
-        Connection drizConnection = DriverManager.getConnection("jdbc:mysql:thin://10.100.100.50:3306/test_units_jdbc");
-        Connection mysqlConnection = DriverManager.getConnection("jdbc:mysql://10.100.100.50:3306/test_units_jdbc");
+        Connection drizConnection;
+        Connection mysqlConnection;
+        if (DriverTest.mysql_host.contains(":"))
+        {
+         drizConnection = DriverManager.getConnection("jdbc:mysql:thin://"+DriverTest.mysql_host+"/test_units_jdbc");
+         mysqlConnection = DriverManager.getConnection("jdbc:mysql://"+DriverTest.mysql_host+"/test_units_jdbc");
+        }
+        else
+        {
+             drizConnection = DriverManager.getConnection("jdbc:mysql:thin://"+DriverTest.mysql_host+":3306/test_units_jdbc");
+         mysqlConnection = DriverManager.getConnection("jdbc:mysql://"+DriverTest.mysql_host+":3306/test_units_jdbc");
+        }
               
         long sum = 0;
         int i;
@@ -57,8 +67,18 @@ public class LoadTest {
     }
     @Test
     public void prepareTest() throws SQLException {
-        Connection drizConnection = DriverManager.getConnection("jdbc:mysql:thin://10.100.100.50:3306/test_units_jdbc");
-        Connection mysqlConnection = DriverManager.getConnection("jdbc:mysql://10.100.100.50:3306/test_units_jdbc");
+        Connection drizConnection;
+        Connection mysqlConnection;
+        if (DriverTest.mysql_host.contains(":"))
+        {
+            drizConnection = DriverManager.getConnection("jdbc:mysql:thin://"+DriverTest.mysql_host+"/test_units_jdbc");
+            mysqlConnection = DriverManager.getConnection("jdbc:mysql://"+DriverTest.mysql_host+"/test_units_jdbc");
+        }
+        else
+        {
+            drizConnection = DriverManager.getConnection("jdbc:mysql:thin://"+DriverTest.mysql_host+":3306/test_units_jdbc");
+            mysqlConnection = DriverManager.getConnection("jdbc:mysql://"+DriverTest.mysql_host+":3306/test_units_jdbc");
+        }
         Statement stmt = drizConnection.createStatement();
         stmt.executeUpdate("drop table if exists loadsofdata2");
         stmt.executeUpdate("create table loadsofdata2 (id int not null primary key auto_increment, data blob) engine=innodb");
@@ -119,8 +139,18 @@ public class LoadTest {
 
     @Test
     public void prepareManyParamsTest() throws SQLException {
-        Connection drizConnection = DriverManager.getConnection("jdbc:mysql:thin://10.100.100.50:3306/test_units_jdbc");
-        Connection mysqlConnection = DriverManager.getConnection("jdbc:mysql://10.100.100.50:3306/test_units_jdbc");
+        Connection drizConnection;
+        Connection mysqlConnection;
+        if (DriverTest.mysql_host.contains(":"))
+        {
+            drizConnection = DriverManager.getConnection("jdbc:mysql:thin://"+DriverTest.mysql_host+"/test_units_jdbc");
+            mysqlConnection = DriverManager.getConnection("jdbc:mysql://"+DriverTest.mysql_host+"/test_units_jdbc");
+        }
+        else
+        {
+            drizConnection = DriverManager.getConnection("jdbc:mysql:thin://"+DriverTest.mysql_host+":3306/test_units_jdbc");
+            mysqlConnection = DriverManager.getConnection("jdbc:mysql://"+DriverTest.mysql_host+":3306/test_units_jdbc");
+        }
         Statement stmt = drizConnection.createStatement();
         stmt.executeUpdate("drop table if exists loadsofdata3");
         StringBuilder sb = new StringBuilder("d0 int");
@@ -163,7 +193,17 @@ public class LoadTest {
     }
     @Test
     public void benchPrepare() throws SQLException {
-        Connection drizConnection = DriverManager.getConnection("jdbc:mysql:thin://10.100.100.50:3306/test_units_jdbc");
+        Connection drizConnection;
+        if (DriverTest.mysql_host.contains(":"))
+        {
+             drizConnection=DriverManager.getConnection("jdbc:mysql:thin://"+DriverTest.mysql_host+"/test_units_jdbc");
+            
+        }
+        else
+        {
+             drizConnection=DriverManager.getConnection("jdbc:mysql:thin://"+DriverTest.mysql_host+":3306/test_units_jdbc");
+        }
+        
         long startTime=System.nanoTime();
         long x = 1000000;
         for(int i=0; i<x; i++ ) {

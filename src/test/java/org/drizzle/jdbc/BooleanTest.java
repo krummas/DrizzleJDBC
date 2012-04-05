@@ -19,7 +19,15 @@ import static org.junit.Assert.assertTrue;
 public class BooleanTest {
     @Test
     public void testBoolean() throws SQLException {
-        Connection conn = DriverManager.getConnection("jdbc:drizzle://root@"+DriverTest.host+":4427/test_units_jdbc");
+        Connection conn;
+        if (DriverTest.host.contains(":"))
+        {
+            conn = DriverManager.getConnection("jdbc:drizzle://root@" + DriverTest.host + "/test_units_jdbc");
+        }
+        else
+        {
+            conn = DriverManager.getConnection("jdbc:drizzle://root@" + DriverTest.host + ":4427/test_units_jdbc");
+        }
         Statement stmt = conn.createStatement();
         stmt.execute("drop table  if exists booleantest");
         stmt.execute("create table booleantest (id int not null primary key auto_increment, test boolean)");

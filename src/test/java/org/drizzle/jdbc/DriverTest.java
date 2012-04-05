@@ -28,13 +28,21 @@ import static junit.framework.Assert.assertTrue;
  * Time: 7:58:11 AM
  */
 public class DriverTest {
-    public static String host = "10.100.100.50";
+    public static String host="localhost";
+    public static String mysql_host="localhost";
     private Connection connection;
     static { Logger.getLogger("").setLevel(Level.OFF); }
 
     public DriverTest() throws SQLException {
         //connection = DriverManager.getConnection("jdbc:mysql:thin://10.100.100.50:3306/test_units_jdbc");
-       connection = DriverManager.getConnection("jdbc:drizzle://root@"+host+":3307/test_units_jdbc");
+        if (DriverTest.host.contains(":"))
+        {
+            connection = DriverManager.getConnection("jdbc:drizzle://root@" + DriverTest.host + "/test_units_jdbc");
+        }
+        else
+        {
+            connection = DriverManager.getConnection("jdbc:drizzle://root@" + DriverTest.host + ":3307/test_units_jdbc");
+        }
        //connection = DriverManager.getConnection("jdbc:mysql://10.100.100.50:3306/test_units_jdbc");
     }
     @After
@@ -1215,11 +1223,26 @@ public class DriverTest {
     @Test
     public void testConnectWithDB() throws SQLException {
 
-        Connection conn = DriverManager.getConnection("jdbc:mysql:thin://"+host+":3306/");
+        Connection conn;
+        if(DriverTest.mysql_host.contains(":"))
+        {
+            conn = DriverManager.getConnection("jdbc:mysql:thin://"+DriverTest.mysql_host+"/");
+        }
+        else 
+        {
+            conn = DriverManager.getConnection("jdbc:mysql:thin://"+DriverTest.mysql_host+":3306/");
+        }
         try {
             conn.createStatement().executeUpdate("drop database test_units_jdbc_testdrop");
         } catch (Exception e) {}
-        conn = DriverManager.getConnection("jdbc:mysql:thin://"+host+":3306/test_units_jdbc_testdrop?createDB=true");
+        if(DriverTest.host.contains(":"))
+        {
+            conn = DriverManager.getConnection("jdbc:mysql:thin://"+DriverTest.mysql_host+"/test_units_jdbc_testdrop?createDB=true");
+        }
+        else 
+        {
+            conn = DriverManager.getConnection("jdbc:mysql:thin://"+DriverTest.mysql_host+":3306/test_units_jdbc_testdrop?createDB=true");
+        }
         DatabaseMetaData dbmd = conn.getMetaData();
         ResultSet rs = dbmd.getSchemas();
         boolean foundDb = false;

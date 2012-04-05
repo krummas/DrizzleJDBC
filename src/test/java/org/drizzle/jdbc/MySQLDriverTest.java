@@ -24,7 +24,14 @@ import static org.junit.Assert.assertFalse;
 public class MySQLDriverTest extends DriverTest {
     private Connection connection;
     public MySQLDriverTest() throws SQLException {
-        connection = DriverManager.getConnection("jdbc:mysql:thin://10.100.100.50:3306/test_units_jdbc");
+        if(DriverTest.mysql_host.contains(":"))
+        {
+            connection = DriverManager.getConnection("jdbc:mysql:thin://"+DriverTest.mysql_host+"/test_units_jdbc");
+        }
+        else 
+        {
+            connection = DriverManager.getConnection("jdbc:mysql:thin://"+DriverTest.mysql_host+":3306/test_units_jdbc");
+        }
        // connection = DriverManager.getConnection("jdbc:mysql://10.100.100.50:3306/test_units_jdbc");
     }
     @Override
@@ -34,7 +41,15 @@ public class MySQLDriverTest extends DriverTest {
     
     @Test
     public void testAuthConnection() throws SQLException {
-        Connection conn = DriverManager.getConnection("jdbc:mysql:thin://test:test@10.100.100.50:3306/test_units_jdbc");
+        Connection conn;
+        if(DriverTest.mysql_host.contains(":"))
+        {
+            conn= DriverManager.getConnection("jdbc:mysql:thin://test:test@"+DriverTest.mysql_host+"/test_units_jdbc");
+        }
+        else
+        {
+            conn= DriverManager.getConnection("jdbc:mysql:thin://test:test@"+DriverTest.mysql_host+":3306/test_units_jdbc");
+        }
         Statement stmt = conn.createStatement();
         ResultSet rs = stmt.executeQuery("select * from t1");
         rs.close();
@@ -44,7 +59,15 @@ public class MySQLDriverTest extends DriverTest {
 
     @Test
     public void testAuthConnection2() throws SQLException {
-        Connection conn = DriverManager.getConnection("jdbc:mysql:thin://e_passwd:@10.100.100.50:3306/test_units_jdbc");
+        Connection conn;
+        if(DriverTest.mysql_host.contains(":"))
+        {
+            conn=DriverManager.getConnection("jdbc:mysql:thin://e_passwd:@"+DriverTest.mysql_host+"/test_units_jdbc");
+        }
+        else
+        {
+            conn=DriverManager.getConnection("jdbc:mysql:thin://e_passwd:@"+DriverTest.mysql_host+":3306/test_units_jdbc");
+        }
         Statement stmt = conn.createStatement();
         ResultSet rs = stmt.executeQuery("select * from t1");
         rs.close();
@@ -58,7 +81,15 @@ public class MySQLDriverTest extends DriverTest {
         props.setProperty("user","test");
         props.setProperty("password","test");
 
-        Connection conn = DriverManager.getConnection("jdbc:mysql:thin://teest:teest@10.100.100.50:3306/test_units_jdbc",props);
+        Connection conn;
+        if (DriverTest.mysql_host.contains(":"))
+        {
+            conn= DriverManager.getConnection("jdbc:mysql:thin://teest:teest@"+DriverTest.mysql_host+"/test_units_jdbc",props);
+        }
+        else
+        {
+            conn= DriverManager.getConnection("jdbc:mysql:thin://teest:teest@"+DriverTest.mysql_host+":3306/test_units_jdbc",props);
+        }
         Statement stmt = conn.createStatement();
         ResultSet rs = stmt.executeQuery("select * from t1");
         rs.close();

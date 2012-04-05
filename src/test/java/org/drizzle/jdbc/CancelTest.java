@@ -17,7 +17,15 @@ import static org.junit.Assert.assertTrue;
 public class CancelTest {
     @Test(expected = SQLQueryCancelledException.class)
     public void cancelQuery() throws SQLException, InterruptedException {
-        Connection conn = DriverManager.getConnection("jdbc:drizzle://"+DriverTest.host+":3306/test_units_jdbc");
+        Connection conn;
+        if (DriverTest.host.contains(":"))
+        {
+            conn = DriverManager.getConnection("jdbc:drizzle://"+DriverTest.host+"/test_units_jdbc");
+        }
+        else
+        {
+            conn = DriverManager.getConnection("jdbc:drizzle://"+DriverTest.host+":3306/test_units_jdbc");
+        }
         Statement stmt = conn.createStatement();
          new CancelThread(stmt).start();
         stmt.execute("select * from information_schema.columns, information_schema.tables, information_schema.table_constraints");
@@ -47,7 +55,15 @@ public class CancelTest {
 
     @Test(expected = SQLQueryTimedOutException.class)
     public void timeoutQuery() throws SQLException, InterruptedException {
-        Connection conn = DriverManager.getConnection("jdbc:drizzle://"+DriverTest.host+":3306/test_units_jdbc");
+        Connection conn;
+        if (DriverTest.host.contains(":"))
+        {
+            conn = DriverManager.getConnection("jdbc:drizzle://" + DriverTest.host + "/test_units_jdbc");
+        }
+        else
+        {
+            conn = DriverManager.getConnection("jdbc:drizzle://" + DriverTest.host + ":3306/test_units_jdbc");
+        }
         Statement stmt = conn.createStatement();
         stmt.setQueryTimeout(1);
         stmt.executeQuery("select * from information_schema.columns, information_schema.tables, information_schema.table_constraints");
@@ -55,14 +71,22 @@ public class CancelTest {
     }
     @Test(expected = SQLQueryTimedOutException.class)
     public void timeoutPrepQuery() throws SQLException, InterruptedException {
-        Connection conn = DriverManager.getConnection("jdbc:drizzle://"+DriverTest.host+":3306/test_units_jdbc");
+        Connection conn;
+        if (DriverTest.host.contains(":"))
+        {
+            conn = DriverManager.getConnection("jdbc:drizzle://" + DriverTest.host + "/test_units_jdbc");
+        }
+        else
+        {
+            conn = DriverManager.getConnection("jdbc:drizzle://" + DriverTest.host + ":3306/test_units_jdbc");
+        }
         PreparedStatement stmt = conn.prepareStatement("select * from information_schema.columns, information_schema.tables, information_schema.table_constraints");
         stmt.setQueryTimeout(1);
         stmt.execute();
     }
     @Test(expected = SQLNonTransientException.class)
     public void connectionTimeout() throws SQLException {
-        Connection conn = DriverManager.getConnection("jdbc:drizzle://www.google.com:1234/test_units_jdbc?connectTimeout=1");
+     Connection conn = DriverManager.getConnection("jdbc:drizzle://www.google.com:1234/test_units_jdbc?connectTimeout=1");
     }
 
     

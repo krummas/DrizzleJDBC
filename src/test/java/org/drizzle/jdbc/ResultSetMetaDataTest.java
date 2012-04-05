@@ -17,7 +17,15 @@ public class ResultSetMetaDataTest {
     static { Logger.getLogger("").setLevel(Level.OFF); }
     @Test
     public void metaDataTest() throws SQLException {
-        Connection connection = DriverManager.getConnection("jdbc:drizzle://root@"+DriverTest.host+":3307/test_units_jdbc");
+        Connection connection;
+        if (DriverTest.host.contains(":"))
+        {
+            connection = DriverManager.getConnection("jdbc:drizzle://root@" + DriverTest.host + "/test_units_jdbc");
+        }
+        else
+        {
+            connection = DriverManager.getConnection("jdbc:drizzle://root@" + DriverTest.host + ":3307/test_units_jdbc");
+        }
         Statement stmt = connection.createStatement();
         stmt.execute("drop table if exists test_rsmd");  
         stmt.execute("create table test_rsmd (id_col int not null primary key auto_increment, " +

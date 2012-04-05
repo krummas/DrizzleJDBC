@@ -54,7 +54,15 @@ public class BlobTest {
 
     @Test
     public void testBug716378() throws SQLException {
-        Connection conn = DriverManager.getConnection("jdbc:drizzle://" + DriverTest.host + ":3306/test_units_jdbc");
+        Connection conn;
+        if (DriverTest.host.contains(":"))
+        {
+            conn = DriverManager.getConnection("jdbc:drizzle://" + DriverTest.host + "/test_units_jdbc");
+        }
+        else
+        {
+            conn = DriverManager.getConnection("jdbc:drizzle://" + DriverTest.host + ":3306/test_units_jdbc");
+        }
         Statement stmt = conn.createStatement();
         stmt.execute("drop table  if exists bug716378");
         stmt.execute("create table bug716378 (id int not null primary key auto_increment, test longblob, test2 blob, test3 text)");
