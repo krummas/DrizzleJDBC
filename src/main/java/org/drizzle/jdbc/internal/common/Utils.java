@@ -24,10 +24,10 @@
 
 package org.drizzle.jdbc.internal.common;
 
-import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.*;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * User: marcuse Date: Feb 19, 2009 Time: 8:40:51 PM
@@ -96,63 +96,49 @@ public class Utils {
      * @return an escaped string
      */
     public static String sqlEscapeString(final String str) {
-        byte[] strBytes = new byte[0];
-        try {
-            strBytes = str.getBytes("UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("UTF-8 not supported", e);
-        }
-        byte[] outBytes = new byte[strBytes.length * 2]; //overkill but safe, streams need to be escaped on-the-fly
-        int bytePointer = 0;
+        StringBuilder buffer = new StringBuilder(str.length() * 2);
         boolean neededEscaping = false;
-        for (final byte b : strBytes) {
-            if (needsEscaping(b)) {
+        for (int i = 0; i < str.length(); i++) {
+            final char c = str.charAt(i);
+            if (needsEscaping((byte) c)) {
                 neededEscaping = true;
-                outBytes[bytePointer++] = '\\';
-                outBytes[bytePointer++] = b;
-            } else {
-                outBytes[bytePointer++] = b;
+                buffer.append('\\');
             }
+            buffer.append(c);
         }
-        if(neededEscaping)
-            try {
-                return new String(outBytes, 0, bytePointer, "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                throw new RuntimeException("UTF-8 not supported", e);
-            }
-        else
-            return str;
+        return neededEscaping ? buffer.toString() : str;
     }
 
     /**
-     * returns count of characters c in str.
+     * Counts the number of occurrences of a character in a string.
      * <p/>
      * Does not count chars enclosed in single or double quotes
      *
-     * @param str the string to count
-     * @param c   the character
-     * @return the number of chars c in str
+     * @param str the string to check
+     * @param chr the character to count
+     * @return the number of matching characters in the string
      */
-    public static int countChars(final String str, final char c) {
+    public static int countChars(final String str, final char chr) {
         int count = 0;
         boolean isWithinDoubleQuotes = false;
         boolean isWithinQuotes = false;
 
-        for (final byte b : str.getBytes()) {
-            if (b == '"' && !isWithinQuotes && !isWithinDoubleQuotes) {
+        for (int i = 0; i < str.length(); i++) {
+            final char c = str.charAt(i);
+            if (c == '"' && !isWithinQuotes && !isWithinDoubleQuotes) {
                 isWithinDoubleQuotes = true;
-            } else if (b == '"' && !isWithinQuotes) {
+            } else if (c == '"' && !isWithinQuotes) {
                 isWithinDoubleQuotes = false;
             }
 
-            if (b == '\'' && !isWithinQuotes && !isWithinDoubleQuotes) {
+            if (c == '\'' && !isWithinQuotes && !isWithinDoubleQuotes) {
                 isWithinQuotes = true;
-            } else if (b == '\'' && !isWithinDoubleQuotes) {
+            } else if (c == '\'' && !isWithinDoubleQuotes) {
                 isWithinQuotes = false;
             }
 
             if (!isWithinDoubleQuotes && !isWithinQuotes) {
-                if (c == b) {
+                if (chr == c) {
                     count++;
                 }
             }
@@ -168,29 +154,23 @@ public class Utils {
         int lastQueryPos = 0;
         List<String> queryParts = new LinkedList<String>();
 
-        byte [] queryBytes;
-        try {
-            queryBytes = query.getBytes("UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("UTF-8 not supported", e);
-        }
-        
-        for (final byte b : queryBytes) {
+        for (int i = 0; i < query.length(); i++) {
+            final char c = query.charAt(i);
 
-            if (b == '"' && !isWithinQuotes && !isWithinDoubleQuotes) {
+            if (c == '"' && !isWithinQuotes && !isWithinDoubleQuotes) {
                 isWithinDoubleQuotes = true;
-            } else if (b == '"' && !isWithinQuotes) {
+            } else if (c == '"' && !isWithinQuotes) {
                 isWithinDoubleQuotes = false;
             }
 
-            if (b == '\'' && !isWithinQuotes && !isWithinDoubleQuotes) {
+            if (c == '\'' && !isWithinQuotes && !isWithinDoubleQuotes) {
                 isWithinQuotes = true;
-            } else if (b == '\'' && !isWithinDoubleQuotes) {
+            } else if (c == '\'' && !isWithinDoubleQuotes) {
                 isWithinQuotes = false;
             }
 
             if (!isWithinDoubleQuotes && !isWithinQuotes) {
-                if (b == '?') {
+                if (c == '?') {
                     queryParts.add(query.substring(lastQueryPos, queryPos));
                     lastQueryPos = queryPos + 1;
                 }
@@ -213,7 +193,7 @@ public class Utils {
         //final byte[] queryBytes = query.getBytes();
 
         for (int i = 0; i < query.length(); i++) {
-            final int b = query.codePointAt(i);
+            final char c = query.charAt(i);
             int nextCodePoint = 0;
 
             if (i < query.length() - 1) {
@@ -222,29 +202,29 @@ public class Utils {
 
             switch (parsingState) {
                 case WITHIN_DOUBLE_QUOTES:
-                    if (b == '"') {
+                    if (c == '"') {
                         nextParsingState = ParsingState.NORMAL;
                     }
                     break;
                 case WITHIN_QUOTES:
-                    if (b == '\'') {
+                    if (c == '\'') {
                         nextParsingState = ParsingState.NORMAL;
                     }
                     break;
                 case NORMAL:
-                    if (b == '\'') {
+                    if (c == '\'') {
                         nextParsingState = ParsingState.WITHIN_QUOTES;
-                    } else if (b == '"') {
+                    } else if (c == '"') {
                         nextParsingState = ParsingState.WITHIN_DOUBLE_QUOTES;
-                    } else if (b == '/' && nextCodePoint == '*') {
+                    } else if (c == '/' && nextCodePoint == '*') {
                         nextParsingState = ParsingState.WITHIN_COMMENT;
                         parsingState = ParsingState.WITHIN_COMMENT;
-                    } else if (b == '#') {
+                    } else if (c == '#') {
                         return sb.toString();
                     }
                     break;
                 case WITHIN_COMMENT:
-                    if (b == '*' && nextCodePoint == '/') {
+                    if (c == '*' && nextCodePoint == '/') {
                         nextParsingState = ParsingState.NORMAL;
                         i++;
                     }
@@ -252,7 +232,7 @@ public class Utils {
             }
 
             if (parsingState != ParsingState.WITHIN_COMMENT) {
-                sb.append((char) b);
+                sb.append(c);
             }
             parsingState = nextParsingState;
         }
