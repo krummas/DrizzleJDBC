@@ -22,27 +22,18 @@ public class ResultSetUnsupportedMethodsTest {
     public ResultSetUnsupportedMethodsTest() throws SQLException {
         //connection = DriverManager.getConnection("jdbc:mysql:thin://localhost:3306/test_units_jdbc");
 	
-        String abc= System.getProperty("drizzle.test.address");
-        if (abc!=null)
+        String check_connectionaddress= System.getProperty("drizzle.test.address");
+        if (check_connectionaddress!=null)
         {
-            DriverTest.host=System.getProperty("drizzle.test.address");
+            ConnectionCheck.host=System.getProperty("drizzle.test.address");
         }
-        abc=System.getProperty("mysql.test.address");
+        check_connectionaddress=System.getProperty("mysql.test.address");
         
-        if (abc!=null)
-            DriverTest.mysql_host=System.getProperty("mysql.test.address");
+        if (check_connectionaddress!=null)
+            ConnectionCheck.mysql_host=System.getProperty("mysql.test.address");
          
-        Connection connection;
-        if (DriverTest.host.contains(":"))
-        {
-            
-            connection = DriverManager.getConnection("jdbc:drizzle://root@" + DriverTest.host + "/test_units_jdbc");
-        }
-        else
-        {
-            
-            connection = DriverManager.getConnection("jdbc:drizzle://root@" + DriverTest.host + ":4427/test_units_jdbc");
-        }
+        Connection connection=ConnectionCheck.Get_ConnectionDrizzle();
+        
         //connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/test_units_jdbc");
         rs = connection.createStatement().executeQuery("select 1");
     }

@@ -51,15 +51,7 @@ public class BlobStreamingTest {
 
     public BlobStreamingTest() throws SQLException {
         //connection = DriverManager.getConnection("jdbc:mysql:thin://10.100.100.50:3306/test_units_jdbc");
-        if (DriverTest.host.contains(":"))
-        {
-            System.out.println("yes");
-            connection = DriverManager.getConnection("jdbc:drizzle://" + DriverTest.host + "/test_units_jdbc?enableBlobStreaming=true");
-        }
-        else
-        {
-            connection = DriverManager.getConnection("jdbc:drizzle://" + DriverTest.host + ":3307/test_units_jdbc?enableBlobStreaming=true");
-        }
+        connection=ConnectionCheck.Get_ConnectionDrizzle("?enableBlobStreaming=truec");
        //connection = DriverManager.getConnection("jdbc:mysql://10.100.100.50:3306/test_units_jdbc");
     }
   //  @After

@@ -7,28 +7,18 @@ import org.junit.Test;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLNonTransientException;
 import java.sql.Statement;
 
-import static org.junit.Assert.assertTrue;
 
 public class CancelTest {
     @Test(expected = SQLQueryCancelledException.class)
     public void cancelQuery() throws SQLException, InterruptedException {
-        Connection conn;
-        if (DriverTest.host.contains(":"))
-        {
-            conn = DriverManager.getConnection("jdbc:drizzle://"+DriverTest.host+"/test_units_jdbc");
-        }
-        else
-        {
-            conn = DriverManager.getConnection("jdbc:drizzle://"+DriverTest.host+":3306/test_units_jdbc");
-        }
+        Connection conn=ConnectionCheck.Get_ConnectionDrizzle();
         Statement stmt = conn.createStatement();
          new CancelThread(stmt).start();
-        stmt.execute("select * from information_schema.columns, information_schema.tables, information_schema.table_constraints");
+        stmt.execute("select * from information_schema.columns CROSS JOIN information_schema.tables CROSS JOIN information_schema.table_constraints");
 
     }
     private static class CancelThread extends Thread {
@@ -55,32 +45,18 @@ public class CancelTest {
 
     @Test(expected = SQLQueryTimedOutException.class)
     public void timeoutQuery() throws SQLException, InterruptedException {
-        Connection conn;
-        if (DriverTest.host.contains(":"))
-        {
-            conn = DriverManager.getConnection("jdbc:drizzle://" + DriverTest.host + "/test_units_jdbc");
-        }
-        else
-        {
-            conn = DriverManager.getConnection("jdbc:drizzle://" + DriverTest.host + ":3306/test_units_jdbc");
-        }
-        Statement stmt = conn.createStatement();
-        stmt.setQueryTimeout(1);
-        stmt.executeQuery("select * from information_schema.columns, information_schema.tables, information_schema.table_constraints");
+        Connection conn=ConnectionCheck.Get_ConnectionDrizzle();
+    
+            Statement stmt = conn.createStatement();
+            stmt.setQueryTimeout(1);
+            stmt.executeQuery("select * from information_schema.columns CROSS JOIN information_schema.tables CROSS JOIN information_schema.table_constraints");
+      
 
     }
     @Test(expected = SQLQueryTimedOutException.class)
     public void timeoutPrepQuery() throws SQLException, InterruptedException {
-        Connection conn;
-        if (DriverTest.host.contains(":"))
-        {
-            conn = DriverManager.getConnection("jdbc:drizzle://" + DriverTest.host + "/test_units_jdbc");
-        }
-        else
-        {
-            conn = DriverManager.getConnection("jdbc:drizzle://" + DriverTest.host + ":3306/test_units_jdbc");
-        }
-        PreparedStatement stmt = conn.prepareStatement("select * from information_schema.columns, information_schema.tables, information_schema.table_constraints");
+        Connection conn=ConnectionCheck.Get_ConnectionDrizzle();
+        PreparedStatement stmt = conn.prepareStatement("select * from information_schema.columns CROSS JOIN information_schema.tables CROSS JOIN information_schema.table_constraints");
         stmt.setQueryTimeout(1);
         stmt.execute();
     }
