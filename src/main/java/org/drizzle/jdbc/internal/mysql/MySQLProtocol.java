@@ -697,7 +697,7 @@ public class MySQLProtocol implements Protocol {
                     bOS.writeTo(writer);
                     writer.flush();
                     packIndex++;
-                    break;
+                    bOS.reset();
 
                 }
             }

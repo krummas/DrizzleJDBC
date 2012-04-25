@@ -37,7 +37,7 @@ public class StringParameter implements ParameterHolder {
     private final byte[] byteRepresentation;
 
     public StringParameter(final String parameter) {
-        final String tempParam = "\"" + sqlEscapeString(parameter) + "\"";
+        final String tempParam = "'" + sqlEscapeString(parameter) + "'";
         try {
             this.byteRepresentation = tempParam.getBytes("UTF-8");
         } catch (UnsupportedEncodingException e) {
