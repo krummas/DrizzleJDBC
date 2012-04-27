@@ -2135,7 +2135,11 @@ public class DrizzleResultSet implements ResultSet {
      */
     public Timestamp getTimestamp(final int columnIndex, final Calendar cal) throws SQLException {
         try {
-            return new Timestamp(getValueObject(columnIndex).getTimestamp(cal).getTime());
+            final Timestamp result = getValueObject(columnIndex).getTimestamp(cal);
+            if (result == null) {
+                return null;
+            }
+            return new Timestamp(result.getTime());
         } catch (ParseException e) {
             throw SQLExceptionMapper.getSQLException("Could not parse as time");
         }
@@ -2158,7 +2162,11 @@ public class DrizzleResultSet implements ResultSet {
      */
     public Timestamp getTimestamp(final String columnLabel, final Calendar cal) throws SQLException {
         try {
-            return new Timestamp(getValueObject(columnLabel).getTimestamp(cal).getTime());
+            final Timestamp result = getValueObject(columnLabel).getTimestamp(cal);
+            if (result == null) {
+                return null;
+            }
+            return new Timestamp(result.getTime());
         } catch (ParseException e) {
             throw SQLExceptionMapper.getSQLException("Could not parse as time");
         }
