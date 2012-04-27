@@ -15,15 +15,36 @@ import java.sql.Connection;
  * To change this template use File | Settings | File Templates.
  */
 public class DataSourceTest {
-    @Test
+  
+    DataSource ds;
     public void testDrizzleDataSource() throws SQLException {
-        DataSource ds = new DrizzleDataSource(DriverTest.host,3307,"test_units_jdbc");
+        if (ConnectionCheck.host.contains(":"))
+        {
+            String copyhost_forsplit=ConnectionCheck.host;
+            String Brk[]=copyhost_forsplit.split(":");
+            int convert=Integer.parseInt(Brk[1]);
+            ds = new DrizzleDataSource(Brk[0],convert,"test_units_jdbc");
+        }
+        else
+        {
+            ds = new DrizzleDataSource(ConnectionCheck.host,3307,"test_units_jdbc");
+        }
         Connection connection = ds.getConnection("root", null);
         assertEquals(connection.isValid(0),true);
     }
     @Test
     public void testDrizzleDataSource2() throws SQLException {
-        DataSource ds = new DrizzleDataSource(DriverTest.host,3307,"test_units_jdbc");
+        if (ConnectionCheck.host.contains(":"))
+        {
+            String copyhost_forsplit=ConnectionCheck.host;
+            String Brk[]=copyhost_forsplit.split(":");
+            int convert=Integer.parseInt(Brk[1]);
+            ds = new DrizzleDataSource(Brk[0],convert,"test_units_jdbc");
+        }
+        else
+        {
+            ds = new DrizzleDataSource(ConnectionCheck.host,3307,"test_units_jdbc");
+        }
         Connection connection = ds.getConnection("root","");
         assertEquals(connection.isValid(0),true);
     }
