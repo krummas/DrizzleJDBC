@@ -45,13 +45,13 @@ public class DateParameter implements ParameterHolder {
      */
     public DateParameter(final long timestamp) {
         final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-        byteRepresentation = String.valueOf("\"" + sdf.format(new Date(timestamp)) + "\"").getBytes();
+        byteRepresentation = String.valueOf("'" + sdf.format(new Date(timestamp)) + "'").getBytes();
     }
 
     public DateParameter(final long timestamp, final Calendar cal) {
         final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         sdf.setCalendar(cal);
-        byteRepresentation = String.valueOf("\"" + sdf.format(new Date(timestamp)) + "\"").getBytes();
+        byteRepresentation = String.valueOf("'" + sdf.format(new Date(timestamp)) + "'").getBytes();
 
     }
 

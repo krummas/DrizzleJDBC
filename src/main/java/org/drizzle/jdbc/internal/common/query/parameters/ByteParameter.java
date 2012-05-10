@@ -39,14 +39,14 @@ public class ByteParameter implements ParameterHolder {
     public ByteParameter(final byte[] x) {
         buffer = new byte[x.length * 2 + 2];
         int pos = 0;
-        buffer[pos++] = '"';
+        buffer[pos++] = '\'';
         for (final byte b : x) {
             if (needsEscaping(b)) {
                 buffer[pos++] = '\\';
             }
             buffer[pos++] = b;
         }
-        buffer[pos++] = '"';
+        buffer[pos++] = '\'';
         this.length = pos;
     }
 
