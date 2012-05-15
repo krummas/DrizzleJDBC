@@ -38,7 +38,7 @@ public class TimeParameter implements ParameterHolder {
 
     public TimeParameter(final long timestamp) {
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
-        byteRepresentation = ("\""+sdf.format(new Date(timestamp))+"\"").getBytes();
+        byteRepresentation = ("'"+sdf.format(new Date(timestamp))+"'").getBytes();
     }
 
     public int writeTo(final OutputStream os, int offset, int maxWriteSize) throws IOException {
