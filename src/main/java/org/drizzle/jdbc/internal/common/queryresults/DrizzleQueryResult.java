@@ -52,6 +52,7 @@ public final class DrizzleQueryResult implements SelectQueryResult {
         rowPointer = -1;
         int i = 0;
         for (final ColumnInformation ci : columnInformation) {
+            columnNameMap.put(ci.getTable().toLowerCase()+"."+ci.getName().toLowerCase(), i);
             columnNameMap.put(ci.getName().toLowerCase(), i++);
         }
     }

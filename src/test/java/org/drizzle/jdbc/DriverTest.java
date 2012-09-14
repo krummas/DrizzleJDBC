@@ -33,8 +33,8 @@ public class DriverTest {
     static { Logger.getLogger("").setLevel(Level.OFF); }
 
     public DriverTest() throws SQLException {
-        //connection = DriverManager.getConnection("jdbc:mysql:thin://10.100.100.50:3306/test_units_jdbc");
-       connection = DriverManager.getConnection("jdbc:drizzle://root@"+host+":3307/test_units_jdbc");
+        connection = DriverManager.getConnection("jdbc:mysql:thin://10.100.100.50:3306/test_units_jdbc");
+       //connection = DriverManager.getConnection("jdbc:drizzle://root@"+host+":3307/test_units_jdbc");
        //connection = DriverManager.getConnection("jdbc:mysql://10.100.100.50:3306/test_units_jdbc");
     }
     @After
@@ -1227,10 +1227,22 @@ public class DriverTest {
             if(rs.getString("table_schem").equals("test_units_jdbc_testdrop")) foundDb = true;
         }
         assertTrue(foundDb);
-
-
     }
 
-
+    @Test
+    public void testGithubIssue6() throws SQLException {
+        Connection conn = getConnection();
+        conn.createStatement().execute("drop table if exists github_issue6");
+        conn.createStatement().execute("drop table if exists github_issue6_2");
+        conn.createStatement().execute("create table github_issue6 (id int not null primary key auto_increment, c int)");
+        conn.createStatement().execute("create table github_issue6_2 (id int not null primary key auto_increment, c int)");
+        conn.createStatement().execute("insert into github_issue6 values (null, 100)");
+        conn.createStatement().execute("insert into github_issue6_2 values (null, 200)");
+        ResultSet rs = conn.createStatement().executeQuery("select * from github_issue6 inner join github_issue6_2 on github_issue6.id = github_issue6_2.id");
+        while (rs.next()) {
+            assertEquals(rs.getString("github_issue6.c"), "100");
+            assertEquals(rs.getString("github_issue6_2.c"), "200");
+        }
+    }
 
 }
