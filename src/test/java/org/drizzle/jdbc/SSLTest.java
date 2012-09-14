@@ -30,14 +30,7 @@ import org.junit.Test;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.Arrays;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 
 /**
@@ -47,7 +40,9 @@ import static org.junit.Assert.assertTrue;
 public class SSLTest {
     @Test
     public void sslTest() throws SQLException {
-        
         Connection conn = DriverManager.getConnection("jdbc:drizzle://"+DriverTest.host+":3306/test_units_jdbc?useSSL=true");
+        conn.createStatement().execute("drop table if exists ssltest");
+        conn.createStatement().execute("create table ssltest(id int not null primary key)");
+        conn.close();
     }
 }

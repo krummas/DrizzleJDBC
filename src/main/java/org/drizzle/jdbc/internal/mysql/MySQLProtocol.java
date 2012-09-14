@@ -168,6 +168,13 @@ public class MySQLProtocol implements Protocol {
                 capabilities.add(MySQLServerCapabilities.MULTI_STATEMENTS);
                 capabilities.add(MySQLServerCapabilities.MULTI_RESULTS);
             }
+            // If a database is given, but createDB is not defined or is false,
+            // then just try to connect to the given database
+            if (this.database != null && !this.database.equals("") && !createDB())
+                capabilities.add(MySQLServerCapabilities.CONNECT_WITH_DB);
+            if (info.getProperty("useAffectedRows", "false").equals("false")) {
+                capabilities.add(MySQLServerCapabilities.FOUND_ROWS);
+            }
             if(info.getProperty("useSSL") != null && greetingPacket.getServerCapabilities().contains(MySQLServerCapabilities.SSL)) {
                 capabilities.add(MySQLServerCapabilities.SSL);
                 AbbreviatedMySQLClientAuthPacket amcap = new AbbreviatedMySQLClientAuthPacket(capabilities);
@@ -192,13 +199,7 @@ public class MySQLProtocol implements Protocol {
                 throw new QueryException("Trying to connect with ssl, but ssl not enabled in the server");
             }
 
-            // If a database is given, but createDB is not defined or is false,
-            // then just try to connect to the given database
-            if (this.database != null && !this.database.equals("") && !createDB())
-                capabilities.add(MySQLServerCapabilities.CONNECT_WITH_DB);
-            if (info.getProperty("useAffectedRows", "false").equals("false")) {
-                capabilities.add(MySQLServerCapabilities.FOUND_ROWS);
-            }
+
             final MySQLClientAuthPacket cap = new MySQLClientAuthPacket(this.username,
                     this.password,
                     this.database,
@@ -252,13 +253,15 @@ public class MySQLProtocol implements Protocol {
      */
     public void close() throws QueryException {
         try {
-            socket.shutdownInput();
+            if(! (socket instanceof SSLSocket))
+                socket.shutdownInput();
         } catch (IOException ignored) {
         }
         try {
             final ClosePacket closePacket = new ClosePacket();
             closePacket.send(writer);
-            socket.shutdownOutput();
+            if (! (socket instanceof SSLSocket))
+                socket.shutdownOutput();
             writer.close();
             packetFetcher.close();
         } catch (IOException e) {
