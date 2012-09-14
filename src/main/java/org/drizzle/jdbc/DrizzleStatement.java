@@ -33,16 +33,14 @@ import org.drizzle.jdbc.internal.common.queryresults.ModifyQueryResult;
 import org.drizzle.jdbc.internal.common.queryresults.QueryResult;
 import org.drizzle.jdbc.internal.common.queryresults.ResultSetType;
 
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -83,7 +81,7 @@ public class DrizzleStatement implements Statement {
      * creates queries.
      */
     private final QueryFactory queryFactory;
-    private FileInputStream fileInputStream;
+    private InputStream inputStream;
 
 
     private int queryTimeout;
@@ -171,10 +169,10 @@ public class DrizzleStatement implements Statement {
                 queryResult.close();
             }
             warningsCleared = false;
-            if(fileInputStream == null)
+            if(inputStream == null)
                 queryResult = protocol.executeQuery(queryFactory.createQuery(query));
             else 
-                queryResult = protocol.executeQuery(queryFactory.createQuery(query), fileInputStream);
+                queryResult = protocol.executeQuery(queryFactory.createQuery(query), inputStream);
             return (int) ((ModifyQueryResult) queryResult).getUpdateCount();
         } catch (QueryException e) {
             throw SQLExceptionMapper.get(e);
@@ -182,16 +180,16 @@ public class DrizzleStatement implements Statement {
         finally
         {
             stopTimer();
-            if(fileInputStream != null)
+            if(inputStream != null)
             {
                 try
                 {
-                    fileInputStream.close();
+                    inputStream.close();
                 }
                 catch (IOException e)
                 {
                 }
-                fileInputStream = null;
+                inputStream = null;
             }
         }
     }
@@ -1022,9 +1020,9 @@ public class DrizzleStatement implements Statement {
         this.queryResult = result;
     }
 
-    public void setLocalInfileInputStream(FileInputStream fis)
+    public void setLocalInfileInputStream(InputStream is)
     {
-        this.fileInputStream = fis;
+        this.inputStream = is;
     }
 
 }

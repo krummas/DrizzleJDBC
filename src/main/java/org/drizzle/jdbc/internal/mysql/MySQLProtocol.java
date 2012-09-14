@@ -57,11 +57,7 @@ import org.drizzle.jdbc.internal.mysql.packet.commands.MySQLPingPacket;
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.BufferedInputStream;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -551,7 +547,7 @@ public class MySQLProtocol implements Protocol {
     }
 
     public QueryResult executeQuery(Query dQuery,
-                                    FileInputStream fileInputStream) throws QueryException {
+                                    InputStream inputStream) throws QueryException {
         int packIndex = 0;
         if(hasMoreResults) {
             try {
@@ -612,7 +608,7 @@ public class MySQLProtocol implements Protocol {
         }
 
         packIndex++;
-        return sendFile(dQuery, fileInputStream, packIndex);
+        return sendFile(dQuery, inputStream, packIndex);
     }
 
     /**
@@ -647,19 +643,19 @@ public class MySQLProtocol implements Protocol {
      * Send the given file to the server starting with packet number packIndex
      *
      * @param dQuery          the query that was first issued
-     * @param fileInputStream input stream used to read the file
+     * @param inputStream input stream used to read the file
      * @param packIndex       Starting index, which will be used for sending packets
      * @return the result of the query execution
      * @throws QueryException if something wrong happens
      */
-    private QueryResult sendFile(Query dQuery, FileInputStream fileInputStream,
+    private QueryResult sendFile(Query dQuery, InputStream inputStream,
                                  int packIndex) throws QueryException {
         byte[] emptyHeader = Utils.copyWithLength(intToByteArray(0), 4);
         RawPacket rawPacket;
         ResultPacket resultPacket;
 
         BufferedInputStream bufferedInputStream = new BufferedInputStream(
-                fileInputStream);
+                inputStream);
 
         ByteArrayOutputStream bOS = new ByteArrayOutputStream();
 
