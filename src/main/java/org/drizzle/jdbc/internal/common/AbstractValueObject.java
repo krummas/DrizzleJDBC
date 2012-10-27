@@ -66,21 +66,21 @@ public abstract class AbstractValueObject implements ValueObject {
         if (rawBytes == null) {
             return 0;
         }
-        return Long.valueOf(getString());
+        return Utils.byteArrayToLong(rawBytes);
     }
 
     public int getInt() {
         if (rawBytes == null) {
             return 0;
         }
-        return Integer.valueOf(getString());
+        return Utils.byteArrayToInt(rawBytes);
     }
 
     public short getShort() {
         if (rawBytes == null) {
             return 0;
         }
-        return Short.valueOf(getString());
+        return Utils.byteArrayToShort(rawBytes);
     }
 
     public byte getByte() {
@@ -91,7 +91,7 @@ public abstract class AbstractValueObject implements ValueObject {
             case BIT:
                 return rawBytes[0];
         }
-        return Byte.valueOf(getString());
+        return Utils.byteArrayToByte(rawBytes);
     }
 
     public byte[] getBytes() {

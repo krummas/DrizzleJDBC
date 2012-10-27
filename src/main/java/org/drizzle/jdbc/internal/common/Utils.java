@@ -381,4 +381,107 @@ public class Utils {
         }
         return isJava5;
     }
+
+    public static short byteArrayToShort(byte [] b) {
+        int value = byteArrayToInt(b);
+        if(value > Short.MAX_VALUE)
+            return Short.MAX_VALUE;
+        if(value < Short.MIN_VALUE)
+            return Short.MIN_VALUE;
+
+        return (short) value;
+    }
+    public static byte byteArrayToByte(byte [] b) {
+        int value = byteArrayToInt(b);
+        if(value > Byte.MAX_VALUE)
+            return Byte.MAX_VALUE;
+        if(value < Byte.MIN_VALUE)
+            return Byte.MIN_VALUE;
+
+        return (byte) value;
+    }
+    /**
+     * convert a byte array to an int
+     *
+     * sums negative numbers since Integer.MIN_VALUE < -Integer.MAX_VALUE
+     * @param b
+     * @return
+     */
+    public static int byteArrayToInt(byte [] b) {
+        int sum = 0;
+        int len = b.length;
+
+        int limit = -Integer.MAX_VALUE;
+        int startIdx = 0;
+        boolean isPositive = true;
+        if(len > 1) {
+            byte x =  (byte) (b[0] - '0');
+            if(x < 0 || x > 9) {
+                if(b[0] == '+') {
+                    isPositive = true;
+                    limit = -Integer.MAX_VALUE;
+                    startIdx++;
+                } else if(b[0] == '-') {
+                    isPositive = false;
+                    limit = Integer.MIN_VALUE;
+                    startIdx++;
+                }
+            }
+
+        }
+        int factor = (int) Math.pow(10, len-1-startIdx);
+        for(int i = startIdx; i < b.length; i++) {
+            byte x = (byte) (b[i] - '0');
+            if(x < 0 || x > 9) throw new NumberFormatException("Could not parse as int");
+            int oldSum = sum;
+            sum -= (x * factor);
+            if(sum > oldSum || sum < limit) {
+                if(isPositive)
+                    return Integer.MAX_VALUE;
+                else
+                    return Integer.MIN_VALUE;
+            }
+            factor/=10;
+        }
+        return isPositive?-sum:sum;
+    }
+    public static long byteArrayToLong(byte [] b) {
+        long sum = 0;
+        int len = b.length;
+
+        long limit = -Long.MAX_VALUE;
+        int startIdx = 0;
+        boolean isPositive = true;
+        if(len > 1) {
+            byte x =  (byte) (b[0] - '0');
+            if(x < 0 || x > 9) {
+                if(b[0] == '+') {
+                    isPositive = true;
+                    limit = -Long.MAX_VALUE;
+                    startIdx++;
+                } else if(b[0] == '-') {
+                    isPositive = false;
+                    limit = Long.MIN_VALUE;
+                    startIdx++;
+                }
+            }
+
+        }
+        long factor = (long) Math.pow(10, len-1-startIdx);
+        for(int i = startIdx; i < b.length; i++) {
+            byte x = (byte) (b[i] - '0');
+            if(x < 0 || x > 9) throw new NumberFormatException("Could not parse as long");
+            long oldSum = sum;
+            sum -= (x * factor);
+            if(sum > oldSum || sum < limit) {
+                if(isPositive)
+                    return Long.MAX_VALUE;
+                else
+                    return Long.MIN_VALUE;
+            }
+            factor/=10;
+        }
+        return isPositive?-sum:sum;
+        //return Integer.MAX_VALUE;
+    }
 }

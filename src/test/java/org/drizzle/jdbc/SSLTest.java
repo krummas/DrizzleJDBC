@@ -36,7 +36,7 @@ import java.sql.SQLException;
 /**
  * -Djavax.net.ssl.keyStore=/home/marcuse/cert/keystore -Djavax.net.ssl.keyStorePassword=abcdefgh -Djavax.net.ssl.trustStore=/home/marcuse/cert/truststore -Djavax.net.ssl.trustStorePassword=abcdefgh
  */
-@Ignore // todo: enable from time to time, real pita to set up
+//@Ignore // todo: enable from time to time, real pita to set up
 public class SSLTest {
     @Test
     public void sslTest() throws SQLException {
@@ -44,5 +44,10 @@ public class SSLTest {
         conn.createStatement().execute("drop table if exists ssltest");
         conn.createStatement().execute("create table ssltest(id int not null primary key)");
         conn.close();
+    }
+    @Test
+    public void tttTest() {
+        String s = String.valueOf((long)Integer.MAX_VALUE+1);
+        Integer.parseInt(s);
     }
 }
