@@ -55,10 +55,10 @@ public class JDBCUrl {
 
     public static JDBCUrl parse(String url) {
         DBType dbType;
-        if (url.indexOf("jdbc:mysql:thin://") != -1) {
+        if (url.startsWith("jdbc:mysql:thin://")) {
             dbType = DBType.MYSQL;
             url = url.substring("jdbc:mysql:thin://".length());
-        } else if (url.indexOf("jdbc:drizzle://") != -1) {
+        } else if (url.startsWith("jdbc:drizzle://")) {
             dbType = DBType.DRIZZLE;
             url = url.substring("jdbc:drizzle://".length());
         } else {
@@ -84,23 +84,31 @@ public class JDBCUrl {
                 password = userPassCombo.substring(userPassDividerIndex+1);
             }
         }
-        int hostPortDividerIndex = url.indexOf(":");
-        if (hostPortDividerIndex == -1) {
-            int slashIndex = url.indexOf("/");
-            hostname = url.substring(0, slashIndex);
-            url = url.substring(slashIndex+1);
-        } else {
-            hostname = url.substring(0, hostPortDividerIndex);
-            url = url.substring(hostPortDividerIndex+1);
-            int slashIndex = url.indexOf("/");
-            port = Integer.parseInt(url.substring(0, slashIndex));
-            url = url.substring(slashIndex+1);
-        }
         int slashIndex = url.indexOf("/");
-        if (slashIndex == -1) {
-            database = url;
+        String hostPortCombo = url.substring(0, slashIndex);
+        url = url.substring(slashIndex + 1);
+        int ipv6StartIndex = hostPortCombo.indexOf("[");
+        int ipv6EndIndex = hostPortCombo.indexOf("]");
+        if (ipv6StartIndex >= 0 && ipv6EndIndex > ipv6StartIndex) {
+        	hostname = hostPortCombo.substring(ipv6StartIndex + 1, ipv6EndIndex);
+        	int hostPortDividerIndex = hostPortCombo.indexOf(":", ipv6EndIndex + 1);
+        	if (hostPortDividerIndex != -1) {
+        		port = Integer.parseInt(hostPortCombo.substring(hostPortDividerIndex + 1));
+        	}
         } else {
-            database = url.substring(0, slashIndex);
+        	int hostPortDividerIndex = hostPortCombo.indexOf(":");
+        	if (hostPortDividerIndex == -1) {
+        		hostname = hostPortCombo;
+        	} else {
+        		hostname = hostPortCombo.substring(0, hostPortDividerIndex);
+        		port = Integer.parseInt(hostPortCombo.substring(hostPortDividerIndex + 1));
+        	}
+        }
+        slashIndex = url.indexOf("/");
+        if (slashIndex == -1) {
+        	database = url;
+        } else {
+        	database = url.substring(0, slashIndex);
         }
         return new JDBCUrl(dbType, username, password, hostname, port, database);
    }
