@@ -8,7 +8,7 @@ Maven
     <dependency>
         <groupId>org.drizzle.jdbc</groupId>
         <artifactId>drizzle-jdbc</artifactId>
-        <version>1.1</version>
+        <version>1.2</version>
     </dependency>
 
 
