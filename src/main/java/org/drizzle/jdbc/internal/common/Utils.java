@@ -431,6 +431,8 @@ public class Utils {
         }
         int factor = (int) Math.pow(10, len-1-startIdx);
         for(int i = startIdx; i < b.length; i++) {
+        	if(b[i] == '.')
+        		break;
             byte x = (byte) (b[i] - '0');
             if(x < 0 || x > 9) throw new NumberFormatException("Could not parse as int");
             int oldSum = sum;
@@ -469,6 +471,8 @@ public class Utils {
         }
         long factor = (long) Math.pow(10, len-1-startIdx);
         for(int i = startIdx; i < b.length; i++) {
+        	if(b[i] == '.')
+        		break;
             byte x = (byte) (b[i] - '0');
             if(x < 0 || x > 9) throw new NumberFormatException("Could not parse as long");
             long oldSum = sum;
