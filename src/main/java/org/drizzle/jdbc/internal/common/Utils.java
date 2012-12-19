@@ -410,6 +410,13 @@ public class Utils {
     public static int byteArrayToInt(byte [] b) {
         int sum = 0;
         int len = b.length;
+        
+        for(int i = 0; i < b.length; i++) {
+        	if(b[i] == '.'){
+        		len = i;
+        		break;
+        	}
+        }
 
         int limit = -Integer.MAX_VALUE;
         int startIdx = 0;
@@ -430,7 +437,7 @@ public class Utils {
 
         }
         int factor = (int) Math.pow(10, len-1-startIdx);
-        for(int i = startIdx; i < b.length; i++) {
+        for(int i = startIdx; i < len; i++) {
             byte x = (byte) (b[i] - '0');
             if(x < 0 || x > 9) throw new NumberFormatException("Could not parse as int");
             int oldSum = sum;
@@ -448,6 +455,13 @@ public class Utils {
     public static long byteArrayToLong(byte [] b) {
         long sum = 0;
         int len = b.length;
+        
+        for(int i = 0; i < b.length; i++) {
+        	if(b[i] == '.'){
+        		len = i;
+        		break;
+        	}
+        }
 
         long limit = -Long.MAX_VALUE;
         int startIdx = 0;
@@ -468,7 +482,7 @@ public class Utils {
 
         }
         long factor = (long) Math.pow(10, len-1-startIdx);
-        for(int i = startIdx; i < b.length; i++) {
+        for(int i = startIdx; i < len; i++) {
             byte x = (byte) (b[i] - '0');
             if(x < 0 || x > 9) throw new NumberFormatException("Could not parse as long");
             long oldSum = sum;
