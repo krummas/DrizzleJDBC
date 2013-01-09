@@ -31,6 +31,7 @@ import java.math.BigInteger;
 import java.sql.Blob;
 import java.sql.Date;
 import java.sql.Time;
+import java.sql.Timestamp;
 
 
 /**
@@ -72,7 +73,7 @@ public class MySQLType implements DataType {
         TIMESTAMP(java.sql.Types.TIMESTAMP, Long.class),
         LONGLONG(java.sql.Types.BIGINT, BigInteger.class),
         INT24(java.sql.Types.INTEGER, Integer.class),
-        DATETIME(java.sql.Types.DATE, Date.class),
+        DATETIME(java.sql.Types.TIMESTAMP, Timestamp.class),
         DATE(java.sql.Types.DATE, Date.class),
         TIME(java.sql.Types.TIME, Time.class),
         YEAR(java.sql.Types.SMALLINT, Short.class),
