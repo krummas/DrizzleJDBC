@@ -1606,4 +1606,18 @@ public class DrizzlePreparedStatement extends DrizzleStatement implements Prepar
 
         setParameter(parameterIndex, new BigDecimalParameter(x));
     }
+
+    /**
+     * Indicates whether the statement is auto-closed when no result sets are
+     * remain open.
+     *
+     * @return True or false.
+     */
+    public boolean isCloseOnCompletion() throws SQLException {
+        return false;
+    }
+
+    public void closeOnCompletion() throws SQLException {
+        throw SQLExceptionMapper.getFeatureNotSupportedException("Statement closeOnCompletion");
+    }
 }

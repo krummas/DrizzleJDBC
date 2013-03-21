@@ -458,6 +458,18 @@ public class DrizzleResultSet implements ResultSet {
     }
 
     /**
+     * <p>Gets the value of the designated column in the current row of this <code>ResultSet</code> object.
+     * @param columnIndex the first column is 1, the second is 2, ...
+     * @param type The Java object type of the column to be retrieved.
+     * @return an object of the specified type holding the column value
+     * @throws java.sql.SQLException if the columnIndex is not valid; if a database access error occurs or this method
+     *                               is called on a closed result set
+     */
+    public <T> T getObject(final int columnIndex, Class<T> type) throws SQLException {
+        return (T)(getObject(columnIndex));
+    }
+
+    /**
      * <p>Gets the value of the designated column in the current row of this <code>ResultSet</code> object as an
      * <code>Object</code> in the Java programming language.
      * <p/>
@@ -484,6 +496,18 @@ public class DrizzleResultSet implements ResultSet {
         } catch (ParseException e) {
             throw SQLExceptionMapper.getSQLException("Could not get object: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * <p>Gets the value of the designated column in the current row of this <code>ResultSet</code> object.
+     * @param columnLabel the label for the column specified with the SQL AS clause.  If the SQL AS clause was not
+     * @param type The Java object type of the column to be retrieved.
+     * @return an object of the specified type holding the column value
+     * @throws java.sql.SQLException if the columnIndex is not valid; if a database access error occurs or this method
+     *                               is called on a closed result set
+     */
+    public <T> T getObject(final String columnLabel, Class<T> type) throws SQLException {
+        return (T)(getObject(columnLabel));
     }
 
     /**
