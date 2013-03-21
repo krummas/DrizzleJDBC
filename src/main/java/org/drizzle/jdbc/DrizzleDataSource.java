@@ -33,6 +33,8 @@ import javax.sql.DataSource;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.util.logging.Logger;
 import java.util.Properties;
 
 /**
@@ -119,6 +121,14 @@ public class DrizzleDataSource implements DataSource {
      */
     public void setLogWriter(final PrintWriter out) throws SQLException {
 
+    }
+
+    /**
+     * Retrieves the parent logger for this data source.
+     * @return The parent logger
+     */
+    public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+        throw new SQLFeatureNotSupportedException("getParentLogger");
     }
 
     /**

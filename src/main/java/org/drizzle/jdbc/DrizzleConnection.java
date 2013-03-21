@@ -50,6 +50,7 @@ import java.sql.Struct;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -182,6 +183,15 @@ public final class DrizzleConnection
         rs.close();
         stmt.close();
         return autocommit;
+    }
+
+    /**
+     * Terminates an open connection.
+     *
+     * @throws SQLException if a database access error occurs
+     */
+    public void abort(Executor executor) throws SQLException {
+        throw SQLExceptionMapper.getFeatureNotSupportedException("Connection abort");
     }
 
     /**
@@ -1195,6 +1205,28 @@ public final class DrizzleConnection
      */
     public String getDatabase() {
         return protocol.getDatabase();
+    }
+
+    /**
+     * Return the network timeout waiting for a database request to finish.
+     *
+     * @return the timeout in seconds (0 for no timeout)
+     */
+    public int getNetworkTimeout() throws SQLException {
+        return 0;
+    }
+    public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException {
+        throw SQLExceptionMapper.getFeatureNotSupportedException("Connection setNetworkTimeout");
+    }
+
+    /**
+     * Set the database schema. Silently ignored if not supported by the
+     * database.
+     */
+    public String getSchema() throws SQLException {
+        return null;
+    }
+    public void setSchema(String schema) throws SQLException {
     }
 
     /**

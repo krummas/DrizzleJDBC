@@ -24,6 +24,7 @@
 
 package org.drizzle.jdbc;
 
+import org.drizzle.jdbc.internal.SQLExceptionMapper;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -226,6 +227,26 @@ public final class MySQLDatabaseMetaData extends CommonDatabaseMetaData {
                 " AND table_name='" + table + "' ORDER BY scope";
         final Statement stmt = getConnection().createStatement();
         return stmt.executeQuery(query);
+    }
+
+   /**
+     * Retrieve a description of the psuedo or hidden columns in a table.
+     * @param catalog a catalog name
+     * @param schemaPattern a schema name pattern
+     * @param tableNamePattern a table name pattern
+     * @param columnNamePattern a column name pattern
+     * @return Each row in the result set is a column description.
+     */
+    public ResultSet getPseudoColumns(String catalog,
+                         String schemaPattern,
+                         String tableNamePattern,
+                         String columnNamePattern)
+                           throws SQLException {
+        throw SQLExceptionMapper.getFeatureNotSupportedException("getPseudoColumns");
+    }
+
+    public boolean generatedKeyAlwaysReturned() throws SQLException {
+        return false;
     }
 
 
