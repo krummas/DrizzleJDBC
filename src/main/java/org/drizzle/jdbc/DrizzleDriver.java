@@ -34,6 +34,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.util.Properties;
 import java.util.logging.Logger;
 
@@ -156,5 +157,13 @@ public final class DrizzleDriver implements java.sql.Driver {
      */
     public boolean jdbcCompliant() {
         return false;
+    }
+
+    /**
+     * Retrieves the parent logger for this driver.
+     * @return The parent logger
+     */
+    public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+        return log;
     }
 }
