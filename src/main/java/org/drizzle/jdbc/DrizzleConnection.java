@@ -954,10 +954,13 @@ public final class DrizzleConnection
      *        <p/>
      */
     public boolean isValid(final int timeout) throws SQLException {
+        if (timeout <0) {
+            throw new SQLException("Negative timeout supplied");
+        }
         try {
             return protocol.ping();
-        } catch (QueryException e) {
-            throw SQLExceptionMapper.get(e);
+        } catch (Exception e) {
+            return false;
         }
     }
 
