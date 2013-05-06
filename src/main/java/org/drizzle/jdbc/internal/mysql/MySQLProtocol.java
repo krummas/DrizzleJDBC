@@ -671,9 +671,6 @@ public class MySQLProtocol implements Protocol {
                     byte[] byteHeader = Utils.copyWithLength(
                             intToByteArray(data1.length), 4);
                     byteHeader[3] = (byte) packIndex;
-
-                    log.finest("Sending : " + MySQLProtocol.hexdump(byteHeader, 0) + " - data length = " + data1.length);
-
                     // Send the packet
                     writer.write(byteHeader);
                     writer.write(data1);
@@ -688,8 +685,6 @@ public class MySQLProtocol implements Protocol {
                 if (bOS.size() >= 0xffffff) {
                     byte[] byteHeader = Utils.copyWithLength(intToByteArray(bOS.size()), 4);
                     byteHeader[3] = (byte) packIndex;
-
-                    log.finest("Sending : " + MySQLProtocol.hexdump(byteHeader, 0));
                     // Send the packet
                     writer.write(byteHeader);
 
@@ -708,7 +703,6 @@ public class MySQLProtocol implements Protocol {
         try {
             emptyHeader[3] = (byte) packIndex;
             writer.write(emptyHeader);
-            log.finest("Sending : " + MySQLProtocol.hexdump(emptyHeader, 0));
             writer.flush();
         } catch (IOException e) {
             throw new QueryException("Could not send query: " + e.getMessage(),

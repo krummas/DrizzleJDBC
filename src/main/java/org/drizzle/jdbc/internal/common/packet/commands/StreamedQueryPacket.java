@@ -75,7 +75,6 @@ public class StreamedQueryPacket implements CommandPacket
                     intToByteArray( query.length() + 1), 5);
             byteHeader[3] = (byte) 0;
             byteHeader[4] = (byte) 0x03;
-            log.finest("Sending : " + MySQLProtocol.hexdump(byteHeader, 0));
             ostream.write(byteHeader);
 
             query.writeTo(ostream);
