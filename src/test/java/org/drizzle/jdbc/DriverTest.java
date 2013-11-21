@@ -437,6 +437,13 @@ public class DriverTest {
         assertEquals(true,rs.next());
         assertEquals("ccc",rs.getString(2));
 
+        // test reuse of batch parameters between addBatch calls
+        ps.setString(1, "ddd");
+        ps.addBatch();
+        ps.addBatch();
+        a = ps.executeBatch();
+        assertEquals(2, a.length);
+        for(int c : a) assertEquals(1, c);
     }
     @Test
     public void batchTestStmt() throws SQLException {
