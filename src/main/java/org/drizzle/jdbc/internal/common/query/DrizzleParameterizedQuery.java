@@ -32,6 +32,7 @@ import org.drizzle.jdbc.internal.common.query.parameters.ParameterHolder;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -63,7 +64,7 @@ public class DrizzleParameterizedQuery implements ParameterizedQuery {
         this.query = paramQuery.getQuery();
         this.queryPartsArray = paramQuery.getQueryPartsArray();
         paramCount = queryPartsArray.length - 1;
-        parameters = new ParameterHolder[paramCount];
+        parameters = Arrays.copyOf(paramQuery.getParameters(), paramCount);
     }
 
     public void setParameter(final int position, final ParameterHolder parameter) throws IllegalParameterException {
