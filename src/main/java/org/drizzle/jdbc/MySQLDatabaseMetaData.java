@@ -153,7 +153,7 @@ public final class MySQLDatabaseMetaData extends CommonDatabaseMetaData {
                 "   WHEN 'CASCADE' THEN 0\n" +
                 "   WHEN 'SET NULL' THEN 2\n" +
                 "   WHEN 'SET DEFAULT' THEN 4\n" +
-                "END UPDATE_RULE,\n" +
+                "END DELETE_RULE,\n" +
                 "rc.constraint_name FK_NAME,\n" +
                 "null PK_NAME,\n" +
                 "6 DEFERRABILITY\n" +
@@ -193,7 +193,7 @@ public final class MySQLDatabaseMetaData extends CommonDatabaseMetaData {
                 "   WHEN 'CASCADE' THEN 0\n" +
                 "   WHEN 'SET NULL' THEN 2\n" +
                 "   WHEN 'SET DEFAULT' THEN 4\n" +
-                "END UPDATE_RULE,\n" +
+                "END DELETE_RULE,\n" +
                 "rc.constraint_name FK_NAME,\n" +
                 "null PK_NAME,\n" +
                 "6 DEFERRABILITY\n" +

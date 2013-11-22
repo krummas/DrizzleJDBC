@@ -181,7 +181,7 @@ public class DrizzleDataBaseMetaData extends CommonDatabaseMetaData {
                 "            WHEN 'CASCADE' THEN 0\n" +
                 "            WHEN 'SET NULL' THEN 2\n" +
                 "            WHEN 'SET DEFAULT' THEN 4\n" +
-                "       END UPDATE_RULE,\n" +
+                "       END DELETE_RULE,\n" +
                 "       fk.constraint_name FK_NAME,\n" +
                 "       null PK_NAME,\n" +
                 "       6 DEFERRABILITY\n" +
@@ -219,7 +219,7 @@ public class DrizzleDataBaseMetaData extends CommonDatabaseMetaData {
                 "   WHEN 'CASCADE' THEN 0\n" +
                 "   WHEN 'SET NULL' THEN 2\n" +
                 "   WHEN 'SET DEFAULT' THEN 4\n" +
-                "END UPDATE_RULE,\n" +
+                "END DELETE_RULE,\n" +
                 "fk.constraint_name FK_NAME,\n" +
                 "null PK_NAME,\n" +
                 "6 DEFERRABILITY\n" +
