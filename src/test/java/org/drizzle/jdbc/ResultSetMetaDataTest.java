@@ -1,6 +1,7 @@
 package org.drizzle.jdbc;
 
 import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.fail;
 
 import java.sql.*;
 import java.util.logging.Logger;
@@ -38,5 +39,11 @@ public class ResultSetMetaDataTest {
         assertEquals("nullable_col",rsmd.getColumnLabel(2));
         assertEquals("something",rsmd.getColumnLabel(3));
         assertEquals("unikey_col",rsmd.getColumnName(3));
+        try {
+            rsmd.getColumnName(4);
+            fail();
+        } catch (SQLException sqle) {
+            assertEquals("No such column", sqle.getMessage());
+        }
     }
 }
