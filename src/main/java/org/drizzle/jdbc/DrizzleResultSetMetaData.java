@@ -295,7 +295,7 @@ public class DrizzleResultSetMetaData implements ResultSetMetaData {
     }
 
     private ColumnInformation getColumnInformation(final int column) throws SQLException {
-        if (column - 1 >= 0 && column - 1 <= fieldPackets.size()) {
+        if (column - 1 >= 0 && column - 1 < fieldPackets.size()) {
             return fieldPackets.get(column - 1);
         }
         throw SQLExceptionMapper.getSQLException("No such column");
