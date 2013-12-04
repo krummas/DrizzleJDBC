@@ -27,7 +27,12 @@ package org.drizzle.jdbc.internal.common.queryresults;
 import org.drizzle.jdbc.internal.common.ColumnInformation;
 import org.drizzle.jdbc.internal.common.GeneratedIdValueObject;
 import org.drizzle.jdbc.internal.common.ValueObject;
+import org.drizzle.jdbc.internal.common.queryresults.ColumnFlags;
+import org.drizzle.jdbc.internal.mysql.MySQLColumnInformation;
+import org.drizzle.jdbc.internal.mysql.MySQLType;
 
+import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 
 /**
@@ -85,7 +90,13 @@ public class DrizzleInsertIdQueryResult implements SelectQueryResult {
     }
 
     public List<ColumnInformation> getColumnInformation() {
-        return null;
+        return Arrays.<ColumnInformation>asList(
+                new MySQLColumnInformation.Builder()
+                .flags(EnumSet.of(
+                        ColumnFlags.PRIMARY_KEY, ColumnFlags.AUTO_INCREMENT))
+                .name("insert_id")
+                .type(new MySQLType(MySQLType.Type.LONG))
+                .build());
     }
 
     public ResultSetType getResultSetType() {
