@@ -12,6 +12,10 @@ Maven
     </dependency>
 
 
+Driver class
+------------
+`org.drizzle.jdbc.DrizzleDriver`
+
 Connection string
 -----------------
 `jdbc:drizzle://<user>@<host>:<port>/<database>`
