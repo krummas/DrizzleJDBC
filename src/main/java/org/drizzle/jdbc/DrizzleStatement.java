@@ -737,10 +737,10 @@ public class DrizzleStatement implements Statement {
     }
 
     public int getUpdateCount() throws SQLException {
-        if(queryResult.getResultSetType() == ResultSetType.SELECT) {
+        if(queryResult != null && queryResult.getResultSetType() == ResultSetType.SELECT) {
             return -1;
         }
-        return (int) ((ModifyQueryResult) queryResult).getUpdateCount();
+	return (int)updateCount;
     }
 
     /**
@@ -765,10 +765,18 @@ public class DrizzleStatement implements Statement {
             }
 
             queryResult = protocol.getMoreResults();
-            if(queryResult == null) return false;
+            if(queryResult == null) {
+               this.resultSet=null;
+               setUpdateCount(-1);
+               return false;
+            }
             warningsCleared = false;
-            this.resultSet = new DrizzleResultSet(queryResult, this, getProtocol());
-            return true;
+            if (queryResult.getResultSetType() == ResultSetType.SELECT) {
+                setResultSet(new DrizzleResultSet(queryResult, this, getProtocol()));
+                return true;
+            }
+            setUpdateCount((int)((ModifyQueryResult) queryResult).getUpdateCount());
+            return false;
         } catch (QueryException e) {
             throw SQLExceptionMapper.get(e);
         } finally {
