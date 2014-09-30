@@ -29,6 +29,7 @@ import org.drizzle.jdbc.internal.common.query.Query;
 import org.drizzle.jdbc.internal.common.queryresults.QueryResult;
 
 import java.io.InputStream;
+import java.sql.SQLException;
 import java.util.List;
 
 /**
@@ -208,4 +209,26 @@ public interface Protocol {
     void timeOut() throws QueryException;
 
     QueryResult getMoreResults() throws QueryException;
+
+    /**
+     * Sets the given catalog name in order to select a subspace of this <code>Connection</code> object's database in
+     * which to work.
+     * <p/>
+     * If the protocol does not support catalogs, it will silently ignore this request.
+     *
+     * @param catalog the name of a catalog (subspace in this <code>Connection</code> object's database) in which to
+     *                work
+     * @throws QueryException if a database access error occurs or this method is called on a closed connection
+     * @see #getCatalog
+     */
+    void setCatalog(final String catalog) throws QueryException;
+    /**
+     * Retrieves this <code>Connection</code> object's current catalog name.
+     * <p/>
+     *
+     * @return the current catalog name or <code>null</code> if there is none
+     * @throws QueryException if a database access error occurs or this method is called on a closed connection
+     * @see #setCatalog
+     */
+    public String getCatalog() throws QueryException;
 }
