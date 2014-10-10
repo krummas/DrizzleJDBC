@@ -57,7 +57,6 @@ import org.drizzle.jdbc.internal.mysql.packet.commands.MySQLPingPacket;
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
-
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -461,7 +460,7 @@ public class MySQLProtocol implements Protocol {
             case ERROR:
                 final ErrorPacket ep = (ErrorPacket) resultPacket;
                 checkIfCancelled();
-                log.warning("Could not execute query " + dQuery + ": " + ((ErrorPacket) resultPacket).getMessage());
+                log.warning("Could not execute query " + dQuery.toString() + ": " + ((ErrorPacket) resultPacket).getMessage());
                 throw new QueryException(ep.getMessage(),
                         ep.getErrorNumber(),
                         ep.getSqlState());
@@ -811,7 +810,6 @@ public class MySQLProtocol implements Protocol {
      */
     public void setCatalog(String catalog) throws QueryException
     {
-        log.warning("Switching to " + catalog);
         if (getDatabaseType() == SupportedDatabases.MYSQL)
         {
             executeQuery(new DrizzleQuery("USE `" + catalog + "`"));

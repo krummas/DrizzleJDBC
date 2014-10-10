@@ -29,7 +29,6 @@ import org.drizzle.jdbc.internal.common.query.Query;
 import org.drizzle.jdbc.internal.common.queryresults.QueryResult;
 
 import java.io.InputStream;
-import java.sql.SQLException;
 import java.util.List;
 
 /**
