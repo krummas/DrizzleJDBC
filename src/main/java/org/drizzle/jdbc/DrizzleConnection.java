@@ -226,8 +226,6 @@ public final class DrizzleConnection
      * @throws SQLException if there is a problem talking to the server.
      */
     public void close() throws SQLException {
-        if (isClosed())
-            return;
         try {
             this.timeoutExecutor.shutdown();
             protocol.close();

@@ -460,7 +460,7 @@ public class MySQLProtocol implements Protocol {
             case ERROR:
                 final ErrorPacket ep = (ErrorPacket) resultPacket;
                 checkIfCancelled();
-                log.warning("Could not execute query " + dQuery.toString() + ": " + ((ErrorPacket) resultPacket).getMessage());
+                log.warning("Could not execute query " + dQuery + ": " + ((ErrorPacket) resultPacket).getMessage());
                 throw new QueryException(ep.getMessage(),
                         ep.getErrorNumber(),
                         ep.getSqlState());
@@ -815,6 +815,8 @@ public class MySQLProtocol implements Protocol {
             executeQuery(new DrizzleQuery("USE `" + catalog + "`"));
             this.database = catalog;
         }
+        // else (Drizzle protocol): silently ignored since drizzle does not
+        // support catalogs
     }
 
     /**
@@ -829,6 +831,8 @@ public class MySQLProtocol implements Protocol {
         {
             return getDatabase();
         }
+        // else (Drizzle protocol): retrun null since drizzle does not
+        // support catalogs
         return null;
     }
 }
