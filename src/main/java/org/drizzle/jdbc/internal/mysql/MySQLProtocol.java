@@ -800,4 +800,39 @@ public class MySQLProtocol implements Protocol {
         bb.reset();
         return hexdump(b, offset);
     }
+
+    /**
+     * Catalogs are not supported in drizzle so this is a no-op with a Drizzle
+     * connection<br>
+     * MySQL treats catalogs as databases. The only difference with
+     * {@link MySQLProtocol#selectDB(String)} is that the catalog is switched
+     * inside the connection using SQL 'USE' command
+     */
+    public void setCatalog(String catalog) throws QueryException
+    {
+        if (getDatabaseType() == SupportedDatabases.MYSQL)
+        {
+            executeQuery(new DrizzleQuery("USE `" + catalog + "`"));
+            this.database = catalog;
+        }
+        // else (Drizzle protocol): silently ignored since drizzle does not
+        // support catalogs
+    }
+
+    /**
+     * Catalogs are not supported in drizzle so this will always return null
+     * with a Drizzle connection<br>
+     * MySQL treats catalogs as databases. This function thus returns the
+     * currently selected database
+     */
+    public String getCatalog() throws QueryException
+    {
+        if (getDatabaseType() == SupportedDatabases.MYSQL)
+        {
+            return getDatabase();
+        }
+        // else (Drizzle protocol): retrun null since drizzle does not
+        // support catalogs
+        return null;
+    }
 }
