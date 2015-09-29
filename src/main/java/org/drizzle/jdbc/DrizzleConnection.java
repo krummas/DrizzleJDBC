@@ -297,7 +297,14 @@ public final class DrizzleConnection
      * @see #getCatalog
      */
     public void setCatalog(final String catalog) throws SQLException {
-        // silently ignored since drizzle does not support catalogs
+        try
+        {
+            protocol.setCatalog(catalog);
+        }
+        catch (QueryException e)
+        {
+            throw SQLExceptionMapper.get(e);
+        }
     }
 
     /**
@@ -312,7 +319,14 @@ public final class DrizzleConnection
      * @see #setCatalog
      */
     public String getCatalog() throws SQLException {
-        return null;
+        try
+        {
+            return protocol.getCatalog();
+        }
+        catch (QueryException e)
+        {
+            throw SQLExceptionMapper.get(e);
+        }
     }
 
     /**
