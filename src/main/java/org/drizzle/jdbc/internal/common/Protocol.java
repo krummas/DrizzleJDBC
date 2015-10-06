@@ -230,6 +230,6 @@ public interface Protocol {
      * @see #setCatalog
      */
     public String getCatalog() throws QueryException;
-
-	boolean noCache();
+    
+    boolean noCache();
 }
