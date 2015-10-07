@@ -52,7 +52,7 @@ public class DrizzleQueryFactory implements QueryFactory {
             DrizzleQueryFactory.PREPARED_CACHE.put(query, pq);
             return pq;
         } else {
-        	return new DrizzleParameterizedQuery(pq);
+            return new DrizzleParameterizedQuery(pq);
         }
     }
 
