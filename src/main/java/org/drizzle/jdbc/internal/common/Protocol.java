@@ -231,5 +231,5 @@ public interface Protocol {
      */
     public String getCatalog() throws QueryException;
     
-    boolean noCache();
+    public boolean noPrepStmtCache();
 }

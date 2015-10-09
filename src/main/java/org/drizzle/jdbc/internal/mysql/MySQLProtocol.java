@@ -641,9 +641,9 @@ public class MySQLProtocol implements Protocol {
                 && info.getProperty("createDB", "").equalsIgnoreCase("true");
     }
 
-    public boolean noCache() {
+    public boolean noPrepStmtCache() {
         return info != null
-                && info.getProperty("noCache", "").equalsIgnoreCase("true");
+                && info.getProperty("noPrepStmtCache", "").equalsIgnoreCase("true");
     }
 
     /**

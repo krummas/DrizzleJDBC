@@ -92,7 +92,7 @@ public class DrizzlePreparedStatement extends DrizzleStatement implements Prepar
         if(log.isLoggable(Level.FINEST)) {
             log.finest("Creating prepared statement for " + query);
         }
-        dQuery = queryFactory.createParameterizedQuery(query, protocol.noCache());
+        dQuery = queryFactory.createParameterizedQuery(query, protocol.noPrepStmtCache());
         this.parameterizedBatchHandler = parameterizedBatchHandler;
     }
 
