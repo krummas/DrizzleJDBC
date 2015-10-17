@@ -641,6 +641,10 @@ public class MySQLProtocol implements Protocol {
                 && info.getProperty("createDB", "").equalsIgnoreCase("true");
     }
 
+    public boolean noPrepStmtCache() {
+        return info != null
+                && info.getProperty("noPrepStmtCache", "").equalsIgnoreCase("true");
+    }
 
     /**
      * Send the given file to the server starting with packet number packIndex

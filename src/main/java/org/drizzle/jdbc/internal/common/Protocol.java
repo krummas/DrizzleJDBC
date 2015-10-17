@@ -230,4 +230,6 @@ public interface Protocol {
      * @see #setCatalog
      */
     public String getCatalog() throws QueryException;
+    
+    public boolean noPrepStmtCache();
 }

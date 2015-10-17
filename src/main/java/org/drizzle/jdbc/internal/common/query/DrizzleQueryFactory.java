@@ -39,9 +39,13 @@ public class DrizzleQueryFactory implements QueryFactory {
     {
         return new DrizzleQuery(query);
     }
-    public ParameterizedQuery createParameterizedQuery(final String query) {
+    public ParameterizedQuery createParameterizedQuery(final String query, boolean noCache) {
+
+        if(noCache)
+            return new DrizzleParameterizedQuery(new DrizzleParameterizedQuery(query));
+
+        // Cache prepared statements
         ParameterizedQuery pq = DrizzleQueryFactory.PREPARED_CACHE.get(query);
-        
 
         if(pq == null) {
             pq = new DrizzleParameterizedQuery(query);
