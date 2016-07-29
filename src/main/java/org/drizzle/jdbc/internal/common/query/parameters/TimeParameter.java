@@ -37,7 +37,7 @@ public class TimeParameter implements ParameterHolder {
     private final byte[] byteRepresentation;
 
     public TimeParameter(final long timestamp) {
-        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
+        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS");
         byteRepresentation = ("'"+sdf.format(new Date(timestamp))+"'").getBytes();
     }
 

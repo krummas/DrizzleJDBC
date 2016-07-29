@@ -98,7 +98,12 @@ public class MySQLValueObject extends AbstractValueObject {
         }
         final String rawValue = getString();
         final SimpleDateFormat sdf;
-        sdf = new SimpleDateFormat("HH:mm:ss");
+        if (rawValue.length() > 8) {
+            sdf = new SimpleDateFormat("HH:mm:ss.SSS");
+
+        } else {
+            sdf = new SimpleDateFormat("HH:mm:ss");
+        }
         final java.util.Date utilTime = sdf.parse(rawValue);
         return new Time(utilTime.getTime());
     }
