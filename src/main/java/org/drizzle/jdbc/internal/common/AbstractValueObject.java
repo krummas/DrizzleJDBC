@@ -161,7 +161,9 @@ public abstract class AbstractValueObject implements ValueObject {
         String rawValue = getString();
         SimpleDateFormat sdf;
 
-        if (rawValue.length() > 11) {
+        if (rawValue.length() > 20) {
+            sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        } else if (rawValue.length() >= 19) {
             sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         } else {
             sdf = new SimpleDateFormat("yyyy-MM-dd");

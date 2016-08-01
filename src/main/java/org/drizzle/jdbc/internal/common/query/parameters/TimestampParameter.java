@@ -44,12 +44,12 @@ public class TimestampParameter implements ParameterHolder {
      * @param timestamp the time in millis since epoch
      */
     public TimestampParameter(final long timestamp) {
-        final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         byteRepresentation = String.valueOf("'" + sdf.format(new Date(timestamp)) + "'").getBytes();
     }
 
     public TimestampParameter(final long timestamp, final Calendar cal) {
-        final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         sdf.setCalendar(cal);
         byteRepresentation = String.valueOf("'" + sdf.format(new Date(timestamp)) + "'").getBytes();
 
