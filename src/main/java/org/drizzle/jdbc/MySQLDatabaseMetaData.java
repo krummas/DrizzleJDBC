@@ -120,7 +120,7 @@ public final class MySQLDatabaseMetaData extends CommonDatabaseMetaData {
                 "            null scope_catalog," +
                 "            null scope_schema," +
                 "            null scope_table," +
-                "            null source_data_type," +
+                "            extra source_data_type," +
                 "            '' is_autoincrement" +
                 "    FROM information_schema.columns " +
                 "WHERE table_schema LIKE '" + ((schemaPattern == null) ? "%" : schemaPattern) + "'" +
