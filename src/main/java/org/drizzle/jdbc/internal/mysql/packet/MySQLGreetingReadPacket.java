@@ -50,6 +50,14 @@ public class MySQLGreetingReadPacket {
     public MySQLGreetingReadPacket(final RawPacket rawPacket) throws IOException {
         final Reader reader = new Reader(rawPacket);
         protocolVersion = reader.readByte();
+        if (protocolVersion == -1)
+        {
+            // That's a connection error. Errno will come first, we read and ignore it because we
+            // cannot pass it trough the IOException. Error message will be sufficient
+            // short errno = 
+            reader.readShort();
+            throw new IOException(reader.readString("ASCII"));
+        }
         serverVersion = reader.readString("ASCII");
         serverThreadID = reader.readInt();
         final byte[] seed1 = reader.readRawBytes(8);
