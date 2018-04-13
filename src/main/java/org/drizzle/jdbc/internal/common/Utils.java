@@ -150,6 +150,8 @@ public class Utils {
     public static List<String> createQueryParts(String query) {
         boolean isWithinDoubleQuotes = false;
         boolean isWithinQuotes = false;
+	boolean isWithinBackquotes = false;
+
         int queryPos = 0;
         int lastQueryPos = 0;
         List<String> queryParts = new LinkedList<String>();
@@ -157,19 +159,26 @@ public class Utils {
         for (int i = 0; i < query.length(); i++) {
             final char c = query.charAt(i);
 
-            if (c == '"' && !isWithinQuotes && !isWithinDoubleQuotes) {
+            if (c == '"' && !isWithinQuotes && !isWithinDoubleQuotes && !isWithinBackquotes) {
                 isWithinDoubleQuotes = true;
-            } else if (c == '"' && !isWithinQuotes) {
+            } else if (c == '"' && !isWithinQuotes && !isWithinBackquotes) {
                 isWithinDoubleQuotes = false;
             }
 
-            if (c == '\'' && !isWithinQuotes && !isWithinDoubleQuotes) {
+            if (c == '\'' && !isWithinQuotes && !isWithinDoubleQuotes && !isWithinBackquotes) {
                 isWithinQuotes = true;
-            } else if (c == '\'' && !isWithinDoubleQuotes) {
+            } else if (c == '\'' && !isWithinDoubleQuotes && !isWithinBackquotes) {
                 isWithinQuotes = false;
             }
 
-            if (!isWithinDoubleQuotes && !isWithinQuotes) {
+            if (c == '`' && !isWithinQuotes && !isWithinDoubleQuotes && !isWithinBackquotes) {
+                isWithinBackquotes = true;
+            } else if (c == '`' && !isWithinDoubleQuotes && !isWithinQuotes) {
+                isWithinBackquotes = false;
+            }
+
+
+            if (!isWithinDoubleQuotes && !isWithinQuotes && !isWithinBackquotes) {
                 if (c == '?') {
                     queryParts.add(query.substring(lastQueryPos, queryPos));
                     lastQueryPos = queryPos + 1;
