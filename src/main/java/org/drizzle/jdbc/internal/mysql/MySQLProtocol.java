@@ -24,8 +24,40 @@
 
 package org.drizzle.jdbc.internal.mysql;
 
+import static org.drizzle.jdbc.internal.common.packet.buffer.WriteBuffer.intToByteArray;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Properties;
+import java.util.Set;
+import java.util.logging.Logger;
+
+import javax.net.SocketFactory;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+
+import org.drizzle.jdbc.DrizzleResultSet;
 import org.drizzle.jdbc.internal.SQLExceptionMapper;
-import org.drizzle.jdbc.internal.common.*;
+import org.drizzle.jdbc.internal.common.BinlogDumpException;
+import org.drizzle.jdbc.internal.common.ColumnInformation;
+import org.drizzle.jdbc.internal.common.PacketFetcher;
+import org.drizzle.jdbc.internal.common.Protocol;
+import org.drizzle.jdbc.internal.common.QueryException;
+import org.drizzle.jdbc.internal.common.ServerStatus;
+import org.drizzle.jdbc.internal.common.SupportedDatabases;
+import org.drizzle.jdbc.internal.common.Utils;
+import org.drizzle.jdbc.internal.common.ValueObject;
 import org.drizzle.jdbc.internal.common.packet.EOFPacket;
 import org.drizzle.jdbc.internal.common.packet.ErrorPacket;
 import org.drizzle.jdbc.internal.common.packet.OKPacket;
@@ -54,29 +86,15 @@ import org.drizzle.jdbc.internal.mysql.packet.commands.MySQLClientAuthPacket;
 import org.drizzle.jdbc.internal.mysql.packet.commands.MySQLClientOldPasswordAuthPacket;
 import org.drizzle.jdbc.internal.mysql.packet.commands.MySQLPingPacket;
 
-import javax.net.SocketFactory;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
-import java.io.*;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Properties;
-import java.util.Set;
-import java.util.logging.Logger;
-
-import static org.drizzle.jdbc.internal.common.packet.buffer.WriteBuffer.intToByteArray;
-
 /**
  * TODO: refactor, clean up TODO: when should i read up the resultset? TODO: thread safety? TODO: exception handling
  * User: marcuse Date: Jan 14, 2009 Time: 4:06:26 PM
  */
 public class MySQLProtocol implements Protocol {
     private final static Logger log = Logger.getLogger(MySQLProtocol.class.getName());
+    private static final int MAX_DEFAULT_PACKET_LENGTH = 0x00FFFFFF;
+    private static final int HEADER_LENGTH = 4;
+
     private boolean connected = false;
     private Socket socket;
     private BufferedOutputStream writer;
@@ -94,6 +112,8 @@ public class MySQLProtocol implements Protocol {
     private volatile boolean queryWasCancelled = false;
     private volatile boolean queryTimedOut = false;
     private boolean hasMoreResults = false;
+    private int maxAllowedPacket = MAX_DEFAULT_PACKET_LENGTH;
+
     /**
      * Get a protocol instance
      *
@@ -164,7 +184,7 @@ public class MySQLProtocol implements Protocol {
                     MySQLServerCapabilities.TRANSACTIONS,
                     MySQLServerCapabilities.SECURE_CONNECTION,
                     MySQLServerCapabilities.LOCAL_FILES);
-            if(info.getProperty("allowMultiQueries") != null) {
+            if (info.getProperty("allowMultiQueries") != null) {
                 capabilities.add(MySQLServerCapabilities.MULTI_STATEMENTS);
                 capabilities.add(MySQLServerCapabilities.MULTI_RESULTS);
             }
@@ -175,7 +195,7 @@ public class MySQLProtocol implements Protocol {
             if (info.getProperty("useAffectedRows", "false").equals("false")) {
                 capabilities.add(MySQLServerCapabilities.FOUND_ROWS);
             }
-            if(info.getProperty("useSSL") != null && greetingPacket.getServerCapabilities().contains(MySQLServerCapabilities.SSL)) {
+            if (info.getProperty("useSSL") != null && greetingPacket.getServerCapabilities().contains(MySQLServerCapabilities.SSL)) {
                 capabilities.add(MySQLServerCapabilities.SSL);
                 AbbreviatedMySQLClientAuthPacket amcap = new AbbreviatedMySQLClientAuthPacket(capabilities);
                 amcap.send(writer);
@@ -195,10 +215,9 @@ public class MySQLProtocol implements Protocol {
                 packetFetcher = new SyncPacketFetcher(reader);
 
                 packetSeq++;
-            } else if(info.getProperty("useSSL") != null){
+            } else if (info.getProperty("useSSL") != null) {
                 throw new QueryException("Trying to connect with ssl, but ssl not enabled in the server");
             }
-
 
             final MySQLClientAuthPacket cap = new MySQLClientAuthPacket(this.username,
                     this.password,
@@ -211,7 +230,7 @@ public class MySQLProtocol implements Protocol {
 
             RawPacket rp = packetFetcher.getRawPacket();
 
-            if ((rp.getByteBuffer().get(0) & 0xFF) == 0xFE) {   // Server asking for old format password
+            if ((rp.getByteBuffer().get(0) & 0xFF) == 0xFE) { // Server asking for old format password
                 final MySQLClientOldPasswordAuthPacket oldPassPacket = new MySQLClientOldPasswordAuthPacket(
                         this.password, Utils.copyWithLength(greetingPacket.getSeed(),
                         8), rp.getPacketSeq() + 1);
@@ -227,7 +246,7 @@ public class MySQLProtocol implements Protocol {
                 throw new QueryException("Could not connect: " + message);
             }
 
-            // At this point, the driver is connected to the database, if createDB is true, 
+            // At this point, the driver is connected to the database, if createDB is true,
             // then just try to create the database and to use it
             if (createDB()) {
                 // Try to create the database if it does not exist
@@ -235,6 +254,9 @@ public class MySQLProtocol implements Protocol {
                 // and switch to this database
                 executeQuery(new DrizzleQuery("USE " + this.database));
             }
+            
+            // Read max_allowed_packet from server
+            getMaxAllowedPacket();
 
             connected = true;
         } catch (IOException e) {
@@ -253,14 +275,14 @@ public class MySQLProtocol implements Protocol {
      */
     public void close() throws QueryException {
         try {
-            if(! (socket instanceof SSLSocket))
+            if (!(socket instanceof SSLSocket))
                 socket.shutdownInput();
         } catch (IOException ignored) {
         }
         try {
             final ClosePacket closePacket = new ClosePacket();
             closePacket.send(writer);
-            if (! (socket instanceof SSLSocket))
+            if (!(socket instanceof SSLSocket))
                 socket.shutdownOutput();
             writer.close();
             packetFetcher.close();
@@ -317,7 +339,7 @@ public class MySQLProtocol implements Protocol {
                 final EOFPacket eofPacket = (EOFPacket) ResultPacketFactory.createResultPacket(rawPacket);
                 this.hasMoreResults = eofPacket.getStatusFlags().contains(EOFPacket.ServerStatus.SERVER_MORE_RESULTS_EXISTS);
                 checkIfCancelled();
-                
+
                 return new DrizzleQueryResult(columnInformation, valueObjects, eofPacket.getWarningCount());
             }
 
@@ -431,7 +453,7 @@ public class MySQLProtocol implements Protocol {
     public QueryResult executeQuery(final Query dQuery) throws QueryException {
         log.finest("Executing streamed query: " + dQuery);
         this.hasMoreResults = false;
-        final StreamedQueryPacket packet = new StreamedQueryPacket(dQuery);
+        final StreamedQueryPacket packet = new StreamedQueryPacket(dQuery, maxAllowedPacket);
 
         try {
             // make sure we are in a good state
@@ -488,7 +510,6 @@ public class MySQLProtocol implements Protocol {
                 log.severe("Could not parse result..." + resultPacket.getResultType());
                 throw new QueryException("Could not parse result", (short) -1, SQLExceptionMapper.SQLStates.INTERRUPTED_EXCEPTION.getSqlState());
         }
-
     }
 
     public void addToBatch(final Query dQuery) {
@@ -552,7 +573,7 @@ public class MySQLProtocol implements Protocol {
     public QueryResult executeQuery(Query dQuery,
                                     InputStream inputStream) throws QueryException {
         int packIndex = 0;
-        if(hasMoreResults) {
+        if (hasMoreResults) {
             try {
                 packetFetcher.clearInputStream();
             } catch (IOException e) {
@@ -565,7 +586,7 @@ public class MySQLProtocol implements Protocol {
         }
         this.hasMoreResults = false;
         log.finest("Executing streamed query: " + dQuery);
-        final StreamedQueryPacket packet = new StreamedQueryPacket(dQuery);
+        final StreamedQueryPacket packet = new StreamedQueryPacket(dQuery, maxAllowedPacket);
 
         try {
             packIndex = packet.send(writer);
@@ -671,13 +692,13 @@ public class MySQLProtocol implements Protocol {
                 int data = bufferedInputStream.read();
                 if (data == -1) {
                     // Send the last packet
-                    byte[] data1 = bOS.toByteArray();
                     byte[] byteHeader = Utils.copyWithLength(
-                            intToByteArray(data1.length), 4);
+                            intToByteArray(bOS.size()), 4);
+                    
                     byteHeader[3] = (byte) packIndex;
                     // Send the packet
                     writer.write(byteHeader);
-                    writer.write(data1);
+                    bOS.writeTo(writer);
                     writer.flush();
                     packIndex++;
                     break;
@@ -686,7 +707,7 @@ public class MySQLProtocol implements Protocol {
                 // Add data into buffer
                 bOS.write(data);
 
-                if (bOS.size() >= 0xffffff) {
+                if (bOS.size() >= maxAllowedPacket - 1) {
                     byte[] byteHeader = Utils.copyWithLength(intToByteArray(bOS.size()), 4);
                     byteHeader[3] = (byte) packIndex;
                     // Send the packet
@@ -696,7 +717,6 @@ public class MySQLProtocol implements Protocol {
                     writer.flush();
                     packIndex++;
                     bOS.reset();
-
                 }
             }
         } catch (IOException e) {
@@ -755,9 +775,29 @@ public class MySQLProtocol implements Protocol {
         }
     }
 
+    private void getMaxAllowedPacket() throws QueryException {
+        // Get max_allowed_packet from server
+        QueryResult result = executeQuery(new DrizzleQuery("select @@max_allowed_packet"));
+        DrizzleResultSet resultset = null;
+        try {
+            resultset = new DrizzleResultSet(result, null, this);
+            if (resultset.next())
+                maxAllowedPacket = Math.min(MAX_DEFAULT_PACKET_LENGTH, resultset.getInt(1));
+        } catch (SQLException e) {
+            log.warning("Failed to read max_allowed_packet variable from server + (" + e.getMessage() + ")");
+            maxAllowedPacket = MAX_DEFAULT_PACKET_LENGTH;
+        } finally {
+            if (resultset != null)
+                try {
+                    resultset.close();
+                } catch (SQLException ignore) {
+                }
+        }
+    }
+
     public QueryResult getMoreResults() throws QueryException {
         try {
-            if(!hasMoreResults)
+            if (!hasMoreResults)
                 return null;
             ResultPacket resultPacket = ResultPacketFactory.createResultPacket(packetFetcher.getRawPacket());
             switch(resultPacket.getResultType()) {

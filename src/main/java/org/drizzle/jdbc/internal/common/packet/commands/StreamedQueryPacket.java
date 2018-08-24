@@ -44,7 +44,8 @@ public class StreamedQueryPacket implements CommandPacket
 {
 
     // Maximum packet length coded on 3 bytes
-    private static final int MAX_PACKET_LENGTH =  0x00FFFFFF;
+    private static final int MAX_PACKET_LENGTH = 0x00FFFFFF;
+    private final int maxAllowedPacket;
 
     private final static Logger log = Logger
                                             .getLogger(StreamedQueryPacket.class
@@ -52,19 +53,23 @@ public class StreamedQueryPacket implements CommandPacket
 
     private static final int HEADER_LENGTH = 4;
 
-    private final Query         query;
+    private final Query query;
 
-    public StreamedQueryPacket(final Query query)
-    {
-        this.query = query;
-
+    public StreamedQueryPacket(final Query query) {
+        this(query, MAX_PACKET_LENGTH);
     }
 
-    public int send(final OutputStream ostream) throws IOException,
-            QueryException
-    {
+    public StreamedQueryPacket(Query dQuery, int maxAllowedPacket) {
+        this.query = dQuery;
+        if (maxAllowedPacket == 0)
+            this.maxAllowedPacket = Math.min(maxAllowedPacket, MAX_PACKET_LENGTH);
+        else
+            this.maxAllowedPacket = maxAllowedPacket;
+    }
 
-        if (query.length() > MAX_PACKET_LENGTH - HEADER_LENGTH)
+    public int send(final OutputStream ostream) throws IOException, QueryException {
+
+        if (query.length() > maxAllowedPacket - HEADER_LENGTH)
         {
             // Query can not be sent on only one network packet
             return sendSplittedQuery(ostream);
@@ -91,7 +96,7 @@ public class StreamedQueryPacket implements CommandPacket
         int packetIndex = 0;
         while (remainingBytes >= 0L)
         {
-            int packLength = Math.min(remainingBytes, MAX_PACKET_LENGTH);
+            int packLength = Math.min(remainingBytes, maxAllowedPacket);
 
             byte[] byteHeader = null;
             if (packetIndex == 0)
@@ -112,7 +117,8 @@ public class StreamedQueryPacket implements CommandPacket
                     + packLength + " / " + remainingBytes);
             }
             ostream.write(byteHeader);
-            if(log.isLoggable(Level.FINEST)) {           
+            if (log.isLoggable(Level.FINEST))
+            {
                 log.finest("Header is " + MySQLProtocol.hexdump(byteHeader, 0));
             }
             if (packLength > 0)
@@ -120,7 +126,7 @@ public class StreamedQueryPacket implements CommandPacket
                 query.writeTo(ostream, offset, packLength);
             }
             ostream.flush();
-            if (remainingBytes >= MAX_PACKET_LENGTH)
+            if (remainingBytes >= maxAllowedPacket)
             {
                 remainingBytes -= packLength;
                 offset += packLength;
