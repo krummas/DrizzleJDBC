@@ -29,11 +29,14 @@ import static org.drizzle.jdbc.internal.common.packet.buffer.WriteBuffer.intToBy
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -77,13 +80,13 @@ import org.drizzle.jdbc.internal.common.queryresults.DrizzleUpdateResult;
 import org.drizzle.jdbc.internal.common.queryresults.NoSuchColumnException;
 import org.drizzle.jdbc.internal.common.queryresults.QueryResult;
 import org.drizzle.jdbc.internal.drizzle.packet.DrizzleRowPacket;
+import org.drizzle.jdbc.internal.mysql.packet.MySQLAuthSwitchRequest;
 import org.drizzle.jdbc.internal.mysql.packet.MySQLFieldPacket;
 import org.drizzle.jdbc.internal.mysql.packet.MySQLGreetingReadPacket;
 import org.drizzle.jdbc.internal.mysql.packet.MySQLRowPacket;
 import org.drizzle.jdbc.internal.mysql.packet.commands.AbbreviatedMySQLClientAuthPacket;
 import org.drizzle.jdbc.internal.mysql.packet.commands.MySQLBinlogDumpPacket;
 import org.drizzle.jdbc.internal.mysql.packet.commands.MySQLClientAuthPacket;
-import org.drizzle.jdbc.internal.mysql.packet.commands.MySQLClientOldPasswordAuthPacket;
 import org.drizzle.jdbc.internal.mysql.packet.commands.MySQLPingPacket;
 
 /**
@@ -93,7 +96,6 @@ import org.drizzle.jdbc.internal.mysql.packet.commands.MySQLPingPacket;
 public class MySQLProtocol implements Protocol {
     private final static Logger log = Logger.getLogger(MySQLProtocol.class.getName());
     private static final int MAX_DEFAULT_PACKET_LENGTH = 0x00FFFFFF;
-    private static final int HEADER_LENGTH = 4;
 
     private boolean connected = false;
     private Socket socket;
@@ -113,6 +115,8 @@ public class MySQLProtocol implements Protocol {
     private volatile boolean queryTimedOut = false;
     private boolean hasMoreResults = false;
     private int maxAllowedPacket = MAX_DEFAULT_PACKET_LENGTH;
+    private final boolean ssl;
+    private final String mysqlPublicKey;
 
     /**
      * Get a protocol instance
@@ -175,15 +179,18 @@ public class MySQLProtocol implements Protocol {
             final MySQLGreetingReadPacket greetingPacket = new MySQLGreetingReadPacket(packetFetcher.getRawPacket());
             this.serverThreadId = greetingPacket.getServerThreadID();
 
-            log.finest("Got greeting packet");
+            log.finest("Got greeting packet " + greetingPacket.toString() + " - Server default auth " + greetingPacket.getAuthPlugin());
             this.version = greetingPacket.getServerVersion();
             byte packetSeq = 1;
             final Set<MySQLServerCapabilities> capabilities = EnumSet.of(MySQLServerCapabilities.LONG_PASSWORD,
-                    MySQLServerCapabilities.IGNORE_SPACE,
-                    MySQLServerCapabilities.CLIENT_PROTOCOL_41,
-                    MySQLServerCapabilities.TRANSACTIONS,
-                    MySQLServerCapabilities.SECURE_CONNECTION,
+                    MySQLServerCapabilities.IGNORE_SPACE, MySQLServerCapabilities.CLIENT_PROTOCOL_41,
+                    MySQLServerCapabilities.TRANSACTIONS, MySQLServerCapabilities.SECURE_CONNECTION,
                     MySQLServerCapabilities.LOCAL_FILES);
+
+            if (greetingPacket.getServerCapabilities().contains(MySQLServerCapabilities.CLIENT_PLUGIN_AUTH)) {
+                capabilities.add(MySQLServerCapabilities.CLIENT_PLUGIN_AUTH);
+            }
+
             if (info.getProperty("allowMultiQueries") != null) {
                 capabilities.add(MySQLServerCapabilities.MULTI_STATEMENTS);
                 capabilities.add(MySQLServerCapabilities.MULTI_RESULTS);
@@ -195,17 +202,16 @@ public class MySQLProtocol implements Protocol {
             if (info.getProperty("useAffectedRows", "false").equals("false")) {
                 capabilities.add(MySQLServerCapabilities.FOUND_ROWS);
             }
-            if (info.getProperty("useSSL") != null && greetingPacket.getServerCapabilities().contains(MySQLServerCapabilities.SSL)) {
+            if (info.getProperty("useSSL") != null
+                    && greetingPacket.getServerCapabilities().contains(MySQLServerCapabilities.SSL)) {
                 capabilities.add(MySQLServerCapabilities.SSL);
                 AbbreviatedMySQLClientAuthPacket amcap = new AbbreviatedMySQLClientAuthPacket(capabilities);
                 amcap.send(writer);
 
-                SSLSocketFactory sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
-                SSLSocket sslSocket = (SSLSocket)sslSocketFactory.createSocket(socket,
-                        socket.getInetAddress().getHostAddress(),
-                        socket.getPort(),
-                        false);
-                sslSocket.setEnabledProtocols(new String [] {"TLSv1"});
+                SSLSocketFactory sslSocketFactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+                SSLSocket sslSocket = (SSLSocket) sslSocketFactory.createSocket(socket,
+                        socket.getInetAddress().getHostAddress(), socket.getPort(), false);
+                sslSocket.setEnabledProtocols(new String[] { "TLSv1", "TLSv1.1", "TLSv1.2"});
                 sslSocket.setUseClientMode(true);
                 sslSocket.startHandshake();
                 socket = sslSocket;
@@ -213,30 +219,36 @@ public class MySQLProtocol implements Protocol {
                 writer.flush();
                 reader = new BufferedInputStream(socket.getInputStream(), 32768);
                 packetFetcher = new SyncPacketFetcher(reader);
-
                 packetSeq++;
+
+                ssl = true;
             } else if (info.getProperty("useSSL") != null) {
                 throw new QueryException("Trying to connect with ssl, but ssl not enabled in the server");
-            }
+            } else
+                ssl = false;
 
-            final MySQLClientAuthPacket cap = new MySQLClientAuthPacket(this.username,
-                    this.password,
-                    this.database,
-                    capabilities,
-                    greetingPacket.getSeed(),
-                    packetSeq);
-            cap.send(writer);
+            String mysqlPublicKeyPath = info.getProperty("serverPublicKey");
+            if (mysqlPublicKeyPath != null) {
+                File file = new File(mysqlPublicKeyPath);
+                if (file.exists() && file.canRead()) {
+                    mysqlPublicKey = new String(Files.readAllBytes(Paths.get(file.getPath())));
+                } else
+                    mysqlPublicKey = null;
+            } else
+                mysqlPublicKey = null;
+
             log.finest("Sending auth packet");
+            MySQLClientAuthPacket cap = new MySQLClientAuthPacket(this.username, this.password, this.database,
+                    capabilities, greetingPacket.getSeed(), packetSeq, greetingPacket.getAuthPlugin(), ssl);
+            cap.send(writer);
 
             RawPacket rp = packetFetcher.getRawPacket();
 
-            if ((rp.getByteBuffer().get(0) & 0xFF) == 0xFE) { // Server asking for old format password
-                final MySQLClientOldPasswordAuthPacket oldPassPacket = new MySQLClientOldPasswordAuthPacket(
-                        this.password, Utils.copyWithLength(greetingPacket.getSeed(),
-                        8), rp.getPacketSeq() + 1);
-                oldPassPacket.send(writer);
-
-                rp = packetFetcher.getRawPacket();
+            if ((rp.getByteBuffer().get(0) & 0xFF) == 0xFE) {
+                // Server asking for different authentication
+                final MySQLAuthSwitchRequest authSwitchPacket = new MySQLAuthSwitchRequest(rp, greetingPacket);
+                AuthPlugin plugin = AuthPluginFactory.getAuthPlugin(authSwitchPacket);
+                rp = plugin.authenticate(this);
             }
 
             final ResultPacket resultPacket = ResultPacketFactory.createResultPacket(rp);
@@ -245,7 +257,7 @@ public class MySQLProtocol implements Protocol {
                 final String message = ep.getMessage();
                 throw new QueryException("Could not connect: " + message);
             }
-
+            
             // At this point, the driver is connected to the database, if createDB is true,
             // then just try to create the database and to use it
             if (createDB()) {
@@ -254,7 +266,7 @@ public class MySQLProtocol implements Protocol {
                 // and switch to this database
                 executeQuery(new DrizzleQuery("USE " + this.database));
             }
-            
+
             // Read max_allowed_packet from server
             getMaxAllowedPacket();
 
@@ -753,7 +765,6 @@ public class MySQLProtocol implements Protocol {
             case OK:
                 final OKPacket okpacket = (OKPacket) resultPacket;
                 this.hasMoreResults = okpacket.getServerStatus().contains(ServerStatus.MORE_RESULTS_EXISTS);
-
                 final QueryResult updateResult = new DrizzleUpdateResult(
                         okpacket.getAffectedRows(), okpacket.getWarnings(),
                         okpacket.getMessage(), okpacket.getInsertId());
@@ -814,7 +825,6 @@ public class MySQLProtocol implements Protocol {
                     checkIfCancelled();
                     throw new QueryException(ep.getMessage(), ep.getErrorNumber(),
                                         ep.getSqlState());
-
             }
         } catch (IOException e) {
             throw new QueryException("Could not read result set: "
@@ -878,5 +888,36 @@ public class MySQLProtocol implements Protocol {
         // else (Drizzle protocol): retrun null since drizzle does not
         // support catalogs
         return null;
+    }
+
+    /**
+     * Returns the writer value.
+     * 
+     * @return Returns the writer.
+     */
+    protected BufferedOutputStream getWriter() {
+        return writer;
+    }
+
+    /**
+     * Returns the packetFetcher value.
+     * 
+     * @return Returns the packetFetcher.
+     */
+    protected PacketFetcher getPacketFetcher() {
+        return packetFetcher;
+    }
+
+    public boolean useSsl() {
+        return ssl;
+    }
+
+    /**
+     * Returns the mysqlPublicKey value.
+     * 
+     * @return Returns the mysqlPublicKey.
+     */
+    protected String getMysqlPublicKey() {
+        return mysqlPublicKey;
     }
 }

@@ -80,5 +80,9 @@ public class DrizzleQuery implements Query {
         ostream.write(queryToSend, offset, packLength);
     }
 
-
+    @Override
+    public String toString()
+    {
+        return query;
+    }
 }
