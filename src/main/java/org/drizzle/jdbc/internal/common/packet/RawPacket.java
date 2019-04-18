@@ -129,4 +129,23 @@ public final class RawPacket {
     public int getPacketSeq() {
         return packetSeq;
     }
+    
+    @Override
+    public String toString()
+    {
+        StringBuffer sb = new StringBuffer("Packet #")
+                .append(this.getPacketSeq());
+        int size = getByteBuffer() != null ? getByteBuffer().limit() : 0;
+        sb.append(" size=").append(size);
+        sb.append(" data as text = ");
+        if (size > 1024)
+            size = 1024; // prevent spam
+        for (int i = 0; i < size; i++) {
+            if (this.getByteBuffer().get(i) != 0)
+                sb.append((char) this.getByteBuffer().get(i));
+            else
+                sb.append(' ');
+        }
+        return sb.toString();
+    }
 }
