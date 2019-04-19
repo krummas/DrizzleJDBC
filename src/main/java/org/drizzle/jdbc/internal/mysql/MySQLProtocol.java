@@ -252,10 +252,7 @@ public class MySQLProtocol implements Protocol {
             }
             else if ((rp.getByteBuffer().get(0) & 0xFF) == 0x01) {
                 // AuthMoreData
-                // TODO: digest this packet given actual auth method
-                do {
-                    rp = packetFetcher.getRawPacket();
-                } while ((rp.getByteBuffer().get(0) & 0xFF) == 0x01);
+                rp = AuthPluginFactory.getAuthPlugin(greetingPacket.getAuthPlugin(), greetingPacket.getSeed()).readAuthMoreData(rp, this);
             }
 
             final ResultPacket resultPacket = ResultPacketFactory.createResultPacket(rp);

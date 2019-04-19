@@ -24,6 +24,7 @@
 
 package org.drizzle.jdbc.internal.common.packet;
 
+import org.drizzle.jdbc.internal.common.Utils;
 import org.drizzle.jdbc.internal.common.packet.buffer.ReadUtil;
 
 import java.io.IOException;
@@ -137,6 +138,7 @@ public final class RawPacket {
                 .append(this.getPacketSeq());
         int size = getByteBuffer() != null ? getByteBuffer().limit() : 0;
         sb.append(" size=").append(size);
+        sb.append(" hex data = " + Utils.hexdump(this.getByteBuffer().array(), 0));
         sb.append(" data as text = ");
         if (size > 1024)
             size = 1024; // prevent spam

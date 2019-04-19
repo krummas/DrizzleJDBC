@@ -48,66 +48,23 @@ public class CachingSha2AuthPlugin extends Sha256AuthPlugin {
         WriteBuffer writeBuffer = new WriteBuffer();
         OutputStream os = protocol.getWriter();
 
-        if (protocol.useSsl()) {
-            byte[] scrambledPassword;
-            try {
-                // Send the encrypted password
-                scrambledPassword = Utils.encryptPasswordSha256(protocol.getPassword(), seed);
-                writeBuffer.writeByteArray(scrambledPassword);
+        byte[] scrambledPassword;
+        try {
+            // Send the encrypted password
+            scrambledPassword = Utils.encryptPasswordSha256(protocol.getPassword(), seed);
+            writeBuffer.writeByteArray(scrambledPassword);
 
-                os.write(writeBuffer.getLengthWithPacketSeq((byte) packetSeq));
-                os.write(writeBuffer.getBuffer(), 0, writeBuffer.getLength());
-                os.flush();
-
-                RawPacket packet = protocol.getPacketFetcher().getRawPacket();
-                if ((packet.getByteBuffer().get(0) & 0xFF) == 0x01) {
-                    if ((packet.getByteBuffer().get(1) & 0xFF) == 0x03) {
-                        // FAST auth path ok : nothing more to do
-                        // Fetch next packet
-                    } else if ((packet.getByteBuffer().get(1) & 0xFF) == 0x04) {
-                        // SSL + full auth : send password in clear text
-                        writeBuffer = new WriteBuffer();
-                        writeBuffer.writeByteArray(protocol.getPassword().getBytes());
-                        writeBuffer.writeByte((byte) 0x00);
-
-                        os.write(writeBuffer.getLengthWithPacketSeq((byte) (packet.getPacketSeq() + 1)));
-                        os.write(writeBuffer.getBuffer(), 0, writeBuffer.getLength());
-                        os.flush();
-                    }
-                }
-            } catch (NoSuchAlgorithmException e) {
-                throw new RuntimeException("Unable to use SHA-256", e);
-            }
-        } else {
-            byte[] scrambledPassword;
-            try {
-                // Send the encrypted password
-                scrambledPassword = Utils.encryptPasswordSha256(protocol.getPassword(), seed);
-                writeBuffer.writeByteArray(scrambledPassword);
-
-                os.write(writeBuffer.getLengthWithPacketSeq((byte) packetSeq));
-                os.write(writeBuffer.getBuffer(), 0, writeBuffer.getLength());
-                os.flush();
-
-                // And check the result
-                RawPacket packet = protocol.getPacketFetcher().getRawPacket();
-                packetSeq = packet.getPacketSeq() + 1;
-                if ((packet.getByteBuffer().get(0) & 0xFF) == 0x01) {
-                    // fast_auth_success '0x03';
-                    if ((packet.getByteBuffer().get(1) & 0xFF) == 0x03) {
-                        // Fast auth path ok : nothing more to do
-                        // Fetch next packet
-                    } else if ((packet.getByteBuffer().get(1) & 0xFF) == 0x04) {
-                        authenticateWithRSAPublicKey(protocol, RETRIEVE_RSA_PUBLIC_KEY_CODE);
-                    }
-                }
-
-            } catch (NoSuchAlgorithmException e) {
-                throw new RuntimeException("Unable to use SHA-256", e);
-            }
+            os.write(writeBuffer.getLengthWithPacketSeq((byte) packetSeq));
+            os.write(writeBuffer.getBuffer(), 0, writeBuffer.getLength());
+            os.flush();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Unable to use SHA-256", e);
+        }
+        RawPacket packet = protocol.getPacketFetcher().getRawPacket();
+        if ((packet.getByteBuffer().get(0) & 0xFF) == 0x01) {
+            return readAuthMoreData(packet, protocol);
         }
         return protocol.getPacketFetcher().getRawPacket();
-
     }
 
     public byte[] getEncodedPassword(String password, boolean ssl) {
@@ -122,4 +79,29 @@ public class CachingSha2AuthPlugin extends Sha256AuthPlugin {
         return "caching_sha2_password";
     }
 
+    public RawPacket readAuthMoreData(RawPacket packet, MySQLProtocol protocol) throws IOException, QueryException {
+        WriteBuffer writeBuffer = new WriteBuffer();
+        OutputStream os = protocol.getWriter();
+        if (!protocol.useSsl()) {
+            packetSeq = packet.getPacketSeq() + 1;
+        }
+        if ((packet.getByteBuffer().get(1) & 0xFF) == 0x03) {
+            // FAST auth path ok : nothing more to do
+        } else if ((packet.getByteBuffer().get(1) & 0xFF) == 0x04) {
+            if (protocol.useSsl()) {
+                // SSL + full auth : send password in clear text
+                writeBuffer = new WriteBuffer();
+                writeBuffer.writeByteArray(protocol.getPassword().getBytes());
+                writeBuffer.writeByte((byte) 0x00);
+
+                os.write(writeBuffer.getLengthWithPacketSeq((byte) (packet.getPacketSeq() + 1)));
+                os.write(writeBuffer.getBuffer(), 0, writeBuffer.getLength());
+                os.flush();
+            }
+            else {
+                authenticateWithRSAPublicKey(protocol, RETRIEVE_RSA_PUBLIC_KEY_CODE);
+            }
+        }
+        return protocol.getPacketFetcher().getRawPacket();
+    }
 }

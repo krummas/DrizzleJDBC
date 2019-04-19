@@ -55,4 +55,9 @@ public class OldAuthPlugin implements AuthPlugin {
     public String getDefaultPlugin() {
         return "mysql_native_password";
     }
+
+    public RawPacket readAuthMoreData(RawPacket rp, MySQLProtocol protocol) throws QueryException
+    {
+        throw new QueryException("Don't know how to read auth more data in old auth plugin!");
+    }
 }

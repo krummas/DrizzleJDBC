@@ -221,4 +221,8 @@ public class Sha256AuthPlugin implements AuthPlugin {
         }
         return returnBytes;
     }
+
+    public RawPacket readAuthMoreData(RawPacket rp, MySQLProtocol protocol)throws IOException, QueryException {
+        throw new QueryException("Don't know how to read auth more data in sha256 auth plugin!");
+    }
 }

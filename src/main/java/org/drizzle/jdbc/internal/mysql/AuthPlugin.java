@@ -42,4 +42,6 @@ public interface AuthPlugin {
     public byte[] getEncodedPassword(String password, boolean ssl);
 
     public String getDefaultPlugin();
+
+    public RawPacket readAuthMoreData(RawPacket rp, MySQLProtocol protocol)throws IOException, QueryException;
 }

@@ -80,4 +80,7 @@ public class NativeAuthPlugin implements AuthPlugin {
         return "mysql_native_password";
     }
 
+    public RawPacket readAuthMoreData(RawPacket rp, MySQLProtocol protocol)throws IOException, QueryException {
+        throw new QueryException("Don't know how to read auth more data in native auth plugin!");
+    }
 }
