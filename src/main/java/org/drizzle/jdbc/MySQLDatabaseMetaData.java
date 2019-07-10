@@ -44,7 +44,7 @@ public final class MySQLDatabaseMetaData extends CommonDatabaseMetaData {
                 "ordinal_position KEY_SEQ," +
                 "null pk_name " +
                 "FROM information_schema.columns " +
-                "WHERE table_name='" + table + "' AND column_key='pri'";
+                "WHERE table_name='" + table + "' AND column_key='PRI'";
 
         if (schema != null) {
             query += " AND table_schema = '" + schema + "'";
