@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -144,24 +145,26 @@ public class MySQLProtocol implements Protocol {
         this.username = (username == null ? "" : username);
         this.password = (password == null ? "" : password);
 
+        Integer connectTimeoutInSecs = null;
+
         final SocketFactory socketFactory = SocketFactory.getDefault();
         try {
             // Extract connectTimeout URL parameter
             String connectTimeoutString = info.getProperty("connectTimeout");
-            Integer connectTimeout = null;
             if (connectTimeoutString != null) {
                 try {
-                    connectTimeout = Integer.valueOf(connectTimeoutString);
+                    connectTimeoutInSecs = Integer
+                            .valueOf(connectTimeoutString);
                 } catch (Exception e) {
-                    connectTimeout = null;
+                    connectTimeoutInSecs = null;
                 }
             }
 
             // Create socket with timeout if required
             InetSocketAddress sockAddr = new InetSocketAddress(host, port);
             socket = socketFactory.createSocket();
-            if (connectTimeout != null) {
-                socket.connect(sockAddr, connectTimeout * 1000);
+            if (connectTimeoutInSecs != null) {
+                socket.connect(sockAddr, connectTimeoutInSecs * 1000);
             } else {
                 socket.connect(sockAddr);
             }
@@ -173,6 +176,10 @@ public class MySQLProtocol implements Protocol {
         }
         batchList = new ArrayList<Query>();
         try {
+            // Avoid hanging when reading welcome packet from unresponsive MySQL server,
+            // using identical value as connectTimeout
+            if (connectTimeoutInSecs != null)
+                socket.setSoTimeout(connectTimeoutInSecs * 1000);
             BufferedInputStream reader = new BufferedInputStream(socket.getInputStream(), 32768);
             packetFetcher = new SyncPacketFetcher(reader);
             writer = new BufferedOutputStream(socket.getOutputStream(), 32768);
@@ -280,6 +287,16 @@ public class MySQLProtocol implements Protocol {
                     -1,
                     SQLExceptionMapper.SQLStates.CONNECTION_EXCEPTION.getSqlState(),
                     e);
+        }
+        finally
+        {
+            try {
+                // reset so timeout so it wont affect further operations
+                if (connectTimeoutInSecs != null)
+                    socket.setSoTimeout(0);
+            }
+            catch (SocketException ignored) {
+            }
         }
     }
 
