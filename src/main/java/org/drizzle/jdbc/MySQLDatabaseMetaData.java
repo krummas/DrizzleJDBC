@@ -109,7 +109,7 @@ public final class MySQLDatabaseMetaData extends CommonDatabaseMetaData {
                 "            0 buffer_length," +
                 "            numeric_precision decimal_digits," +
                 "            numeric_scale num_prec_radix," +
-                "            if(is_nullable='yes',1,0) nullable," +
+                "            if(is_nullable=CONVERT('yes' USING utf8) collate utf8_general_ci,1,0) nullable," +
                 "            column_comment remarks," +
                 "            column_default column_def," +
                 "            0 sql_data," +
