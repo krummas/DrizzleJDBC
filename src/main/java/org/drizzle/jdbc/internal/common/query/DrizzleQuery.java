@@ -33,7 +33,7 @@ import java.io.UnsupportedEncodingException;
  */
 public class DrizzleQuery implements Query {
 
-    private final String query;
+    private String query;
     private final byte[] queryToSend;
 
     public DrizzleQuery(final String query) {
@@ -47,11 +47,6 @@ public class DrizzleQuery implements Query {
 
     public DrizzleQuery(final byte[] query) {
         queryToSend = query;
-        try {
-            this.query = new String(query, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("Unsupported encoding: " + e.getMessage(), e);
-        }
     }
 
     public int length() {
@@ -63,16 +58,22 @@ public class DrizzleQuery implements Query {
     }
 
     public String getQuery() {
+        if(query == null)
+            try {
+                this.query = new String(queryToSend, "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                throw new RuntimeException("Unsupported encoding: " + e.getMessage(), e);
+            }
         return query;
     }
 
     public QueryType getQueryType() {
-        return QueryType.classifyQuery(query);
+        return QueryType.classifyQuery(getQuery());
     }
 
     @Override
     public boolean equals(final Object otherObj) {
-        return otherObj instanceof DrizzleQuery && (((DrizzleQuery) otherObj).query).equals(query);
+        return otherObj instanceof DrizzleQuery && (((DrizzleQuery) otherObj).getQuery()).equals(getQuery());
     }
 
     public void writeTo(OutputStream ostream, int offset, int packLength) throws IOException
@@ -83,6 +84,6 @@ public class DrizzleQuery implements Query {
     @Override
     public String toString()
     {
-        return query;
+        return getQuery();
     }
 }
