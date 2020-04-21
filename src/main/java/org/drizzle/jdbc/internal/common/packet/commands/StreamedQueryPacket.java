@@ -42,16 +42,12 @@ import org.drizzle.jdbc.internal.mysql.MySQLProtocol;
  */
 public class StreamedQueryPacket implements CommandPacket
 {
-
     // Maximum packet length coded on 3 bytes
     private static final int MAX_PACKET_LENGTH = 0x00FFFFFF;
-    private final int maxAllowedPacket;
 
     private final static Logger log = Logger
                                             .getLogger(StreamedQueryPacket.class
                                                     .getName());
-
-    private static final int HEADER_LENGTH = 4;
 
     private final Query query;
 
@@ -61,23 +57,24 @@ public class StreamedQueryPacket implements CommandPacket
 
     public StreamedQueryPacket(Query dQuery, int maxAllowedPacket) {
         this.query = dQuery;
-        if (maxAllowedPacket == 0)
-            this.maxAllowedPacket = Math.min(maxAllowedPacket, MAX_PACKET_LENGTH);
-        else
-            this.maxAllowedPacket = maxAllowedPacket;
     }
 
     public int send(final OutputStream ostream) throws IOException, QueryException {
 
-        if (query.length() > maxAllowedPacket - HEADER_LENGTH)
+        if (query.length() >= MAX_PACKET_LENGTH - 1)
         {
             // Query can not be sent on only one network packet
             return sendSplittedQuery(ostream);
         }
         else
         {
+            if (log.isLoggable(Level.FINEST))
+            {
+                log.finest("Sending full query (" + query.length() +" bytes)");
+            }
+            
             byte[] byteHeader = Utils.copyWithLength(
-                    intToByteArray( query.length() + 1), 5);
+                    intToByteArray(query.length() + 1), 5);
             byteHeader[3] = (byte) 0;
             byteHeader[4] = (byte) 0x03;
             ostream.write(byteHeader);
@@ -91,27 +88,33 @@ public class StreamedQueryPacket implements CommandPacket
     private int sendSplittedQuery(OutputStream ostream) throws QueryException,
             IOException
     {
+        if (log.isLoggable(Level.FINEST))
+        {
+            log.finest("Splitting query over several network packets");
+        } 
+        
         int remainingBytes = query.length();
         int offset = 0;
         int packetIndex = 0;
         while (remainingBytes >= 0L)
         {
-            int packLength = Math.min(remainingBytes, maxAllowedPacket);
+            int packLength;
 
             byte[] byteHeader = null;
             if (packetIndex == 0)
             {
-                byteHeader = Utils.copyWithLength(intToByteArray(packLength), 5);
+                packLength = Math.min(remainingBytes, MAX_PACKET_LENGTH - 1);                
+                byteHeader = Utils.copyWithLength(intToByteArray(packLength + 1), 5);
                 // Add the command byte
                 byteHeader[4] = (byte) 0x03;
-                // And remove 1 byte from available data length
-                packLength -= 1;
             }
             else
             {
+                packLength = Math.min(remainingBytes, MAX_PACKET_LENGTH);
                 byteHeader = Utils.copyWithLength(intToByteArray(packLength), 4);
             }
             byteHeader[3] = (byte) packetIndex;
+            
             if(log.isLoggable(Level.FINEST)) {
                 log.finest("Sending packet " + packetIndex + " with length = "
                     + packLength + " / " + remainingBytes);
@@ -126,7 +129,7 @@ public class StreamedQueryPacket implements CommandPacket
                 query.writeTo(ostream, offset, packLength);
             }
             ostream.flush();
-            if (remainingBytes >= maxAllowedPacket)
+            if (remainingBytes >= MAX_PACKET_LENGTH - (packetIndex == 0 ? 1 : 0))
             {
                 remainingBytes -= packLength;
                 offset += packLength;
