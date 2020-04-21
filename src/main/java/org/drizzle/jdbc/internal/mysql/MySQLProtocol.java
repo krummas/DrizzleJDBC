@@ -39,6 +39,7 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.LinkedList;
@@ -71,6 +72,7 @@ import org.drizzle.jdbc.internal.common.packet.ResultPacketFactory;
 import org.drizzle.jdbc.internal.common.packet.ResultSetPacket;
 import org.drizzle.jdbc.internal.common.packet.SyncPacketFetcher;
 import org.drizzle.jdbc.internal.common.packet.buffer.ReadUtil;
+import org.drizzle.jdbc.internal.common.packet.commands.BatchStreamedQueryPacket;
 import org.drizzle.jdbc.internal.common.packet.commands.ClosePacket;
 import org.drizzle.jdbc.internal.common.packet.commands.SelectDBPacket;
 import org.drizzle.jdbc.internal.common.packet.commands.StreamedQueryPacket;
@@ -109,6 +111,7 @@ public class MySQLProtocol implements Protocol {
     private final String username;
     private final String password;
     private final List<Query> batchList;
+    private long batchSize;
     private PacketFetcher packetFetcher;
     private final Properties info;
     private final long serverThreadId;
@@ -118,6 +121,7 @@ public class MySQLProtocol implements Protocol {
     private int maxAllowedPacket = MAX_DEFAULT_PACKET_LENGTH;
     private final boolean ssl;
     private final String mysqlPublicKey;
+    private boolean allowMultiQueries;
 
     /**
      * Get a protocol instance
@@ -175,6 +179,7 @@ public class MySQLProtocol implements Protocol {
                     e);
         }
         batchList = new ArrayList<Query>();
+        batchSize = 0;
         try {
             // Avoid hanging when reading welcome packet from unresponsive MySQL server,
             // using identical value as connectTimeout
@@ -198,6 +203,7 @@ public class MySQLProtocol implements Protocol {
                 capabilities.add(MySQLServerCapabilities.CLIENT_PLUGIN_AUTH);
             }
 
+            this.allowMultiQueries = (info.getProperty("allowMultiQueries") != null && info.getProperty("allowMultiQueries").equalsIgnoreCase("true"));
             if (info.getProperty("allowMultiQueries") != null) {
                 capabilities.add(MySQLServerCapabilities.MULTI_STATEMENTS);
                 capabilities.add(MySQLServerCapabilities.MULTI_RESULTS);
@@ -385,6 +391,31 @@ public class MySQLProtocol implements Protocol {
             }
         }
     }
+    
+    // Based on createDrizzleQueryResult
+    private boolean existsMoreResultsAfterResultset(final ResultSetPacket packet) throws IOException, QueryException {
+        // Skip columns definition
+        for (int i = 0; i < packet.getFieldCount(); i++) {
+            packetFetcher.getRawPacket();
+        }
+        packetFetcher.getRawPacket();
+        while (true) {
+            final RawPacket rawPacket = packetFetcher.getRawPacket();
+            if (ReadUtil.isErrorPacket(rawPacket)) {
+                ErrorPacket errorPacket = (ErrorPacket) ResultPacketFactory.createResultPacket(rawPacket);
+                checkIfCancelled();
+                throw new QueryException(errorPacket.getMessage(), errorPacket.getErrorNumber(), errorPacket.getSqlState());
+            }
+
+            if (ReadUtil.eofIsNext(rawPacket)) {
+                final EOFPacket eofPacket = (EOFPacket) ResultPacketFactory.createResultPacket(rawPacket);
+                boolean hasMoreResults = eofPacket.getStatusFlags().contains(EOFPacket.ServerStatus.SERVER_MORE_RESULTS_EXISTS);
+                checkIfCancelled();
+                return hasMoreResults;
+            }
+            // else, normal row packet... just skip, as we don't care here
+        }
+    }
 
     private void checkIfCancelled() throws QueryException {
         if (queryWasCancelled) {
@@ -493,7 +524,17 @@ public class MySQLProtocol implements Protocol {
             packetFetcher.clearInputStream();
             packet.send(writer);
         } catch (IOException e) {
-            throw new QueryException("Could not send query: " + e.getMessage(),
+            if(dQuery.length() > maxAllowedPacket)
+            {
+                throw new QueryException("Could not send query: "
+                        + e.getMessage() + ". Packet size (" + dQuery.length()
+                        + ") is greater than the server max allowed packet.",
+                        -1, 
+                        SQLExceptionMapper.SQLStates.CONNECTION_EXCEPTION.getSqlState(),
+                        e);
+            }
+            else
+                throw new QueryException("Could not send query: " + e.getMessage(),
                     -1,
                     SQLExceptionMapper.SQLStates.CONNECTION_EXCEPTION.getSqlState(),
                     e);
@@ -515,7 +556,7 @@ public class MySQLProtocol implements Protocol {
             case ERROR:
                 final ErrorPacket ep = (ErrorPacket) resultPacket;
                 checkIfCancelled();
-                log.warning("Could not execute query " + dQuery + ": " + ((ErrorPacket) resultPacket).getMessage());
+                log.warning("Could not execute query " + (dQuery.length() <= 1000 ? dQuery : dQuery.getQuery().substring(0, 999) + "...") + " : " + ((ErrorPacket) resultPacket).getMessage());
                 throw new QueryException(ep.getMessage(),
                         ep.getErrorNumber(),
                         ep.getSqlState());
@@ -547,21 +588,125 @@ public class MySQLProtocol implements Protocol {
 
     public void addToBatch(final Query dQuery) {
         batchList.add(dQuery);
+        try
+        {
+            // Add query size + 1 ';' to batch size
+            batchSize += dQuery.length() + 1;
+        }
+        catch (QueryException ignore)
+        {
+            // That should not happen here, this error being raised only by prepared statements
+        }
     }
 
-    public List<QueryResult> executeBatch() throws QueryException {
-        final List<QueryResult> retList = new ArrayList<QueryResult>(batchList.size());
+    public int[] executeBatch() throws QueryException
+    {
+        int[] result = new int[batchList.size()];
 
-        for (final Query query : batchList) {
-            retList.add(executeQuery(query));
+        if (!allowMultiQueries || batchList.size()==1)
+        {
+            // If allowMultiQueries is false or only one statement in the batch,
+            // no need to bother using batching.
+            // This uses the old code base.
+            int i = 0;
+            for (final Query query : batchList)
+            {
+                QueryResult executeQuery = executeQuery(query);
+                if (executeQuery instanceof DrizzleUpdateResult)
+                {
+                    DrizzleUpdateResult update = (DrizzleUpdateResult) executeQuery;
+                    result[i++] = (int)update.getUpdateCount();
+                }
+                else
+                    result[i++] = Statement.SUCCESS_NO_INFO;
+            }
+        }
+        else
+        {
+            this.hasMoreResults = false;
+            final BatchStreamedQueryPacket packet = new BatchStreamedQueryPacket(batchList, batchSize);
+
+            try {
+                // make sure we are in a good state
+                packetFetcher.clearInputStream();
+                packet.send(writer);
+            } catch (IOException e) {
+                throw new QueryException("Could not send query: " + e.getMessage(),
+                        -1,
+                        SQLExceptionMapper.SQLStates.CONNECTION_EXCEPTION.getSqlState(),
+                        e);
+            }
+
+            RawPacket rawPacket;
+            ResultPacket resultPacket;
+            int resIndex = 0;
+            do
+            {
+                try
+                {
+                    rawPacket = packetFetcher.getRawPacket();
+                    resultPacket = ResultPacketFactory
+                            .createResultPacket(rawPacket);
+                }
+                catch (IOException e)
+                {
+                    throw new QueryException(
+                            "Could not read resultset: " + e.getMessage(), -1,
+                            SQLExceptionMapper.SQLStates.CONNECTION_EXCEPTION
+                                    .getSqlState(),
+                            e);
+                }
+
+                switch (resultPacket.getResultType())
+                {
+                    case ERROR :
+                        final ErrorPacket ep = (ErrorPacket) resultPacket;
+                        checkIfCancelled();
+                        throw new QueryException(ep.getMessage(),
+                                ep.getErrorNumber(), ep.getSqlState());
+                    case OK :
+                        final OKPacket okpacket = (OKPacket) resultPacket;
+                        this.hasMoreResults = okpacket.getServerStatus()
+                                .contains(ServerStatus.MORE_RESULTS_EXISTS);
+                        result[resIndex++] = (int) okpacket.getAffectedRows();
+                        break;
+                    case RESULTSET :
+                        result[resIndex++] = Statement.SUCCESS_NO_INFO;
+                        try
+                        {
+                            this.hasMoreResults = existsMoreResultsAfterResultset(
+                                    (ResultSetPacket) resultPacket);
+                        }
+                        catch (IOException e)
+                        {
+                            throw new QueryException(
+                                    "Could not read result set: "
+                                            + e.getMessage(),
+                                    -1,
+                                    SQLExceptionMapper.SQLStates.CONNECTION_EXCEPTION
+                                            .getSqlState(),
+                                    e);
+                        }
+                        break;
+                    default :
+                        log.severe("Could not parse result..."
+                                + resultPacket.getResultType());
+                        throw new QueryException("Could not parse result",
+                                (short) -1,
+                                SQLExceptionMapper.SQLStates.INTERRUPTED_EXCEPTION
+                                        .getSqlState());
+                }
+
+            } while (this.hasMoreResults);
         }
         clearBatch();
-        return retList;
+        return result;
 
     }
 
     public void clearBatch() {
         batchList.clear();
+        batchSize = 0;
     }
 
     public List<RawPacket> startBinlogDump(final int startPos, final String filename) throws BinlogDumpException {
@@ -814,7 +959,7 @@ public class MySQLProtocol implements Protocol {
         try {
             resultset = new DrizzleResultSet(result, null, this);
             if (resultset.next())
-                maxAllowedPacket = Math.min(MAX_DEFAULT_PACKET_LENGTH, resultset.getInt(1));
+                maxAllowedPacket = resultset.getInt(1);
         } catch (SQLException e) {
             log.warning("Failed to read max_allowed_packet variable from server + (" + e.getMessage() + ")");
             maxAllowedPacket = MAX_DEFAULT_PACKET_LENGTH;
@@ -831,7 +976,8 @@ public class MySQLProtocol implements Protocol {
         try {
             if (!hasMoreResults)
                 return null;
-            ResultPacket resultPacket = ResultPacketFactory.createResultPacket(packetFetcher.getRawPacket());
+            RawPacket rawPacket = packetFetcher.getRawPacket();
+            ResultPacket resultPacket = ResultPacketFactory.createResultPacket(rawPacket);
             switch(resultPacket.getResultType()) {
                 case RESULTSET:
                     return createDrizzleQueryResult((ResultSetPacket) resultPacket);
@@ -846,6 +992,10 @@ public class MySQLProtocol implements Protocol {
                     checkIfCancelled();
                     throw new QueryException(ep.getMessage(), ep.getErrorNumber(),
                                         ep.getSqlState());
+                default :
+                    // Removing code warning... 
+                    // Other cases are probably not possible, so just ignore them 
+                    break;
             }
         } catch (IOException e) {
             throw new QueryException("Could not read result set: "
@@ -857,10 +1007,14 @@ public class MySQLProtocol implements Protocol {
     }
 
     public static String hexdump(byte[] buffer, int offset) {
+        return hexdump(buffer, offset, buffer.length);
+    }
+    
+    public static String hexdump(byte[] buffer, int offset, int length) {
         StringBuffer dump = new StringBuffer();
-        if ((buffer.length - offset) > 0) {
+        if ((buffer.length - offset) >= length) {
             dump.append(String.format("%02x", buffer[offset]));
-            for (int i = offset + 1; i < buffer.length; i++) {
+            for (int i = offset + 1; i < length + offset; i++) {
                 dump.append("_");
                 dump.append(String.format("%02x", buffer[i]));
             }

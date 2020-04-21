@@ -186,6 +186,12 @@ public class DrizzleParameterizedQuery implements ParameterizedQuery {
         return paramCount;
     }
 
+    @Override
+    public byte[] getBytes()
+    {
+        return null;
+    }
+
 
 
 }

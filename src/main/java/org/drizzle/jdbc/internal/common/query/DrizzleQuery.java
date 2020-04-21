@@ -86,4 +86,10 @@ public class DrizzleQuery implements Query {
     {
         return getQuery();
     }
+
+    @Override
+    public byte[] getBytes()
+    {
+        return queryToSend;
+    }
 }

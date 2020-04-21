@@ -42,4 +42,6 @@ public interface Query {
     QueryType getQueryType();
 
     void writeTo(OutputStream ostream, int offset, int packLength) throws IOException, QueryException;
+
+    byte[] getBytes();
 }
