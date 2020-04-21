@@ -382,7 +382,8 @@ public final class DrizzleConnection
     public int getTransactionIsolation() throws SQLException {
         final Statement stmt = createStatement();
         try {
-            final ResultSet rs = stmt.executeQuery("SELECT @@tx_isolation");
+            String tx_isolation = Integer.parseInt(protocol.getServerVersion().split("\\.")[0]) >= 8 ? "SELECT @@transaction_isolation":"SELECT @@tx_isolation" ;
+            final ResultSet rs = stmt.executeQuery(tx_isolation);
             rs.next();
             final String response = rs.getString(1);
             if (response.equals("REPEATABLE-READ")) {
