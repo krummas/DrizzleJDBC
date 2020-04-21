@@ -2419,7 +2419,7 @@ public abstract class CommonDatabaseMetaData implements DatabaseMetaData {
      * @since 1.4
      */
     public int getDatabaseMajorVersion() throws SQLException {
-        return 0;
+        return Integer.parseInt(version.split("\\.")[0]);
     }
 
     /**
@@ -2430,7 +2430,7 @@ public abstract class CommonDatabaseMetaData implements DatabaseMetaData {
      * @since 1.4
      */
     public int getDatabaseMinorVersion() throws SQLException {
-        return 1;
+        return version.split("\\.").length > 1 ? Integer.parseInt(version.split("\\.")[1]) : 0 ;
     }
 
     /**
