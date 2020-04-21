@@ -157,9 +157,6 @@ public class DrizzleParameterizedQuery implements ParameterizedQuery {
             }
             if(sendCounter >= packLength) return;
         }
-        //System.out.println(offset+currentPos);
-
-
     }
     private boolean containsNull(ParameterHolder[] parameters) {
         for(ParameterHolder ph : parameters) {
