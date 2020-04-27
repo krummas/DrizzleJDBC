@@ -31,6 +31,7 @@ Connection options are appended to the connection string, like a http url.
 Current supported options are;
 
 * `useSSL=true` - use ssl to connect (you need to do some java ssl magic to get it to work, look at the mysql documentation)
+* `serverCertificate=/path/to/certificate` - when using ssl to connect, allow to provide a reference to a certificate file for validating the server
 * `allowMultiQueries=true` - allow sending several queries in one round trip to the server
 * `connectTimeout=X` - have an X second connection timeout.
 * `createDB=true` - create the given database if it does not exist when connecting.
