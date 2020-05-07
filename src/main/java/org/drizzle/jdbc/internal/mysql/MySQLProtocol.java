@@ -30,6 +30,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
@@ -38,6 +39,9 @@ import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
+import java.security.cert.CertificateFactory;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -49,8 +53,12 @@ import java.util.Set;
 import java.util.logging.Logger;
 
 import javax.net.SocketFactory;
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import java.security.cert.X509Certificate;
 
 import org.drizzle.jdbc.DrizzleResultSet;
 import org.drizzle.jdbc.internal.SQLExceptionMapper;
@@ -220,8 +228,25 @@ public class MySQLProtocol implements Protocol {
                 capabilities.add(MySQLServerCapabilities.SSL);
                 AbbreviatedMySQLClientAuthPacket amcap = new AbbreviatedMySQLClientAuthPacket(capabilities);
                 amcap.send(writer);
+                SSLSocketFactory sslSocketFactory;
+                if (info.getProperty("serverCertificate") != null)
+                {
+                    File certifcate = new File(info.getProperty("serverCertificate"));
+                    try
+                    {
+                        sslSocketFactory = createSSLSocketFactoryFromCertificate(certifcate);
+                    }
+                    catch (GeneralSecurityException e)
+                    {
+                        throw new QueryException("Could not connect: " + e.getMessage(),
+                                -1,
+                                SQLExceptionMapper.SQLStates.CONNECTION_EXCEPTION.getSqlState(),
+                                e);
+                    }
+                }
+                else
+                     sslSocketFactory= (SSLSocketFactory) SSLSocketFactory.getDefault();
 
-                SSLSocketFactory sslSocketFactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
                 SSLSocket sslSocket = (SSLSocket) sslSocketFactory.createSocket(socket,
                         socket.getInetAddress().getHostAddress(), socket.getPort(), false);
                 sslSocket.setEnabledProtocols(new String[] { "TLSv1", "TLSv1.1", "TLSv1.2"});
@@ -304,6 +329,30 @@ public class MySQLProtocol implements Protocol {
             catch (SocketException ignored) {
             }
         }
+    }
+
+    
+    private static SSLSocketFactory createSSLSocketFactoryFromCertificate(File crtFile) throws GeneralSecurityException, IOException {
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+        trustStore.load(null, null);
+
+        // Read the certificate from disk
+        X509Certificate result;
+        InputStream input = new FileInputStream(crtFile);
+        result = (X509Certificate) CertificateFactory.getInstance("X509").generateCertificate(input);
+            
+        // Add it to the trust store
+        trustStore.setCertificateEntry(crtFile.getName(), result);
+
+        
+        // Convert the trust store to trust managers
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        tmf.init(trustStore);
+        TrustManager[] trustManagers = tmf.getTrustManagers();
+
+        sslContext.init(null, trustManagers, null);
+        return sslContext.getSocketFactory();
     }
 
     /**
