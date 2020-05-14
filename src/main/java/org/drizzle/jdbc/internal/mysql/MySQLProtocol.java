@@ -223,7 +223,7 @@ public class MySQLProtocol implements Protocol {
             if (info.getProperty("useAffectedRows", "false").equals("false")) {
                 capabilities.add(MySQLServerCapabilities.FOUND_ROWS);
             }
-            if (info.getProperty("useSSL") != null
+            if (Boolean.valueOf(info.getProperty("useSSL"))
                     && greetingPacket.getServerCapabilities().contains(MySQLServerCapabilities.SSL)) {
                 capabilities.add(MySQLServerCapabilities.SSL);
                 AbbreviatedMySQLClientAuthPacket amcap = new AbbreviatedMySQLClientAuthPacket(capabilities);
