@@ -130,6 +130,7 @@ public class MySQLProtocol implements Protocol {
     private final boolean ssl;
     private final String mysqlPublicKey;
     private boolean allowMultiQueries;
+    private boolean stripQueryComments;
 
     /**
      * Get a protocol instance
@@ -211,11 +212,12 @@ public class MySQLProtocol implements Protocol {
                 capabilities.add(MySQLServerCapabilities.CLIENT_PLUGIN_AUTH);
             }
 
-            this.allowMultiQueries = (info.getProperty("allowMultiQueries") != null && info.getProperty("allowMultiQueries").equalsIgnoreCase("true"));
-            if (info.getProperty("allowMultiQueries") != null) {
+            this.allowMultiQueries = Boolean.valueOf(info.getProperty("allowMultiQueries"));
+            if (this.allowMultiQueries) {
                 capabilities.add(MySQLServerCapabilities.MULTI_STATEMENTS);
                 capabilities.add(MySQLServerCapabilities.MULTI_RESULTS);
             }
+
             // If a database is given, but createDB is not defined or is false,
             // then just try to connect to the given database
             if (this.database != null && !this.database.equals("") && !createDB())
@@ -223,6 +225,17 @@ public class MySQLProtocol implements Protocol {
             if (info.getProperty("useAffectedRows", "false").equals("false")) {
                 capabilities.add(MySQLServerCapabilities.FOUND_ROWS);
             }
+
+            // Enable / Disable comments stripping (enabled by default), which
+            // occurs with prepared statements
+            if(info.getProperty("stripQueryComments") == null)
+            {
+                // Default value is to strip comments
+                this.stripQueryComments = true;
+            }
+            else
+                this.stripQueryComments = Boolean.valueOf(info.getProperty("stripQueryComments"));
+
             if (Boolean.valueOf(info.getProperty("useSSL"))
                     && greetingPacket.getServerCapabilities().contains(MySQLServerCapabilities.SSL)) {
                 capabilities.add(MySQLServerCapabilities.SSL);
@@ -1143,5 +1156,10 @@ public class MySQLProtocol implements Protocol {
      */
     protected String getMysqlPublicKey() {
         return mysqlPublicKey;
+    }
+
+    public boolean isStripQueryComments()
+    {
+        return stripQueryComments;
     }
 }

@@ -37,6 +37,7 @@ Current supported options are;
 * `createDB=true` - create the given database if it does not exist when connecting.
 * `enableBlobStreaming=true` - experimental support for PBMS blob streaming.
 * `noPrepStmtCache=true` - Disable prepared statement cache.
+* `stripQueryComments=false` - Disable prepared statement comments stripping.
 * `serverPublicKey=/path/to/publickey` - If sha256 password is used, the public can either be provided in this file or will be fetched directly from the server.
 
 

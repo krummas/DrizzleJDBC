@@ -232,4 +232,6 @@ public interface Protocol {
     public String getCatalog() throws QueryException;
     
     public boolean noPrepStmtCache();
+    
+    public boolean isStripQueryComments();
 }
