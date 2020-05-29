@@ -947,7 +947,7 @@ public class MySQLProtocol implements Protocol {
                 // Add data into buffer
                 bOS.write(data);
 
-                if (bOS.size() >= maxAllowedPacket - 1) {
+                if (bOS.size() >= MAX_DEFAULT_PACKET_LENGTH - 1) {
                     byte[] byteHeader = Utils.copyWithLength(intToByteArray(bOS.size()), 4);
                     byteHeader[3] = (byte) packIndex;
                     // Send the packet
