@@ -683,8 +683,9 @@ public class MySQLProtocol implements Protocol {
                     result[i++] = Statement.SUCCESS_NO_INFO;
             }
         }
-        else
+        else if(batchList.size() > 0)
         {
+            // No need to try to send batch if empty
             this.hasMoreResults = false;
             final BatchStreamedQueryPacket packet = new BatchStreamedQueryPacket(batchList, batchSize);
 
