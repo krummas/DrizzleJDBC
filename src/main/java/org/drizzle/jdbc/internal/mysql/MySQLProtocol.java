@@ -618,7 +618,10 @@ public class MySQLProtocol implements Protocol {
             case ERROR:
                 final ErrorPacket ep = (ErrorPacket) resultPacket;
                 checkIfCancelled();
-                log.warning("Could not execute query " + (dQuery.length() <= 1000 ? dQuery : dQuery.getQuery().substring(0, 999) + "...") + " : " + ((ErrorPacket) resultPacket).getMessage());
+                String failingQuery = dQuery.getQuery();
+                log.warning("Could not execute query " +
+                            (failingQuery.length() <= 1000 ? failingQuery : failingQuery.substring(0, 999) + "...") +
+                            " : " + ((ErrorPacket) resultPacket).getMessage());
                 throw new QueryException(ep.getMessage(),
                         ep.getErrorNumber(),
                         ep.getSqlState());
