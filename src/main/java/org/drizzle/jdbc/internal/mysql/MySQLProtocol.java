@@ -176,6 +176,7 @@ public class MySQLProtocol implements Protocol {
             // Create socket with timeout if required
             InetSocketAddress sockAddr = new InetSocketAddress(host, port);
             socket = socketFactory.createSocket();
+            socket.setTcpNoDelay(true);
             if (connectTimeoutInSecs != null) {
                 socket.connect(sockAddr, connectTimeoutInSecs * 1000);
             } else {
@@ -262,6 +263,7 @@ public class MySQLProtocol implements Protocol {
 
                 SSLSocket sslSocket = (SSLSocket) sslSocketFactory.createSocket(socket,
                         socket.getInetAddress().getHostAddress(), socket.getPort(), false);
+                sslSocket.setTcpNoDelay(true);
                 sslSocket.setEnabledProtocols(new String[] { "TLSv1", "TLSv1.1", "TLSv1.2"});
                 sslSocket.setUseClientMode(true);
                 sslSocket.startHandshake();
