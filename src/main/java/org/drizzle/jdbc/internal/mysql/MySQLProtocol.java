@@ -50,6 +50,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.net.SocketFactory;
@@ -264,7 +265,34 @@ public class MySQLProtocol implements Protocol {
                 SSLSocket sslSocket = (SSLSocket) sslSocketFactory.createSocket(socket,
                         socket.getInetAddress().getHostAddress(), socket.getPort(), false);
                 sslSocket.setTcpNoDelay(true);
-                sslSocket.setEnabledProtocols(new String[] { "TLSv1", "TLSv1.1", "TLSv1.2"});
+
+                // Provide a way to enable a given set of SSL protocols through
+                // comma-no-space list in the URL parameter
+                String[] enabledProtocols = new String[]{"TLSv1", "TLSv1.1",
+                        "TLSv1.2"};
+                if (info.getProperty("enabledProtocols") != null)
+                {
+                    // no additional check: it's of user's responsibility to
+                    // provide a well formed list
+                    enabledProtocols = info.getProperty("enabledProtocols")
+                            .split(",");
+                }
+                sslSocket.setEnabledProtocols(enabledProtocols);
+
+                // Provide a way to override the default enabled cipher suites
+                if (info.getProperty("enabledCipherSuites") != null)
+                {
+                    sslSocket.setEnabledCipherSuites(
+                            info.getProperty("enabledCipherSuites").split(","));
+                }
+
+                if (log.isLoggable(Level.FINE))
+                    log.fine("Using SSL with server certificate location="
+                            + info.getProperty("serverCertificate")
+                            + ", enabled protocols = " + enabledProtocols
+                            + ", enabledCipherSuites="
+                            + info.getProperty("enabledCipherSuites"));
+
                 sslSocket.setUseClientMode(true);
                 sslSocket.startHandshake();
                 socket = sslSocket;
