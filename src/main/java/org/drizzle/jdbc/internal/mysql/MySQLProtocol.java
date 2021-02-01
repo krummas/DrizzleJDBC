@@ -42,6 +42,7 @@ import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -59,7 +60,6 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
-import java.security.cert.X509Certificate;
 
 import org.drizzle.jdbc.DrizzleResultSet;
 import org.drizzle.jdbc.internal.SQLExceptionMapper;
@@ -96,10 +96,11 @@ import org.drizzle.jdbc.internal.mysql.packet.MySQLAuthSwitchRequest;
 import org.drizzle.jdbc.internal.mysql.packet.MySQLFieldPacket;
 import org.drizzle.jdbc.internal.mysql.packet.MySQLGreetingReadPacket;
 import org.drizzle.jdbc.internal.mysql.packet.MySQLRowPacket;
-import org.drizzle.jdbc.internal.mysql.packet.commands.AbbreviatedMySQLClientAuthPacket;
 import org.drizzle.jdbc.internal.mysql.packet.commands.MySQLBinlogDumpPacket;
 import org.drizzle.jdbc.internal.mysql.packet.commands.MySQLClientAuthPacket;
 import org.drizzle.jdbc.internal.mysql.packet.commands.MySQLPingPacket;
+import org.drizzle.jdbc.internal.mysql.packet.commands.SSLClientAuthPacket;
+import org.drizzle.jdbc.internal.mysql.packet.commands.SSLClientAuthPacketFactory;
 
 /**
  * TODO: refactor, clean up TODO: when should i read up the resultset? TODO: thread safety? TODO: exception handling
@@ -241,7 +242,8 @@ public class MySQLProtocol implements Protocol {
             if (Boolean.valueOf(info.getProperty("useSSL"))
                     && greetingPacket.getServerCapabilities().contains(MySQLServerCapabilities.SSL)) {
                 capabilities.add(MySQLServerCapabilities.SSL);
-                AbbreviatedMySQLClientAuthPacket amcap = new AbbreviatedMySQLClientAuthPacket(capabilities);
+                SSLClientAuthPacket amcap = SSLClientAuthPacketFactory
+                        .getSSLClientAuthPacket(this.version, capabilities);
                 amcap.send(writer);
                 SSLSocketFactory sslSocketFactory;
                 if (info.getProperty("serverCertificate") != null)
@@ -269,7 +271,7 @@ public class MySQLProtocol implements Protocol {
                 // Provide a way to enable a given set of SSL protocols through
                 // comma-no-space list in the URL parameter
                 String[] enabledProtocols = new String[]{"TLSv1", "TLSv1.1",
-                        "TLSv1.2"};
+                        "TLSv1.2", "TLSv1.3"};
                 if (info.getProperty("enabledProtocols") != null)
                 {
                     // no additional check: it's of user's responsibility to
