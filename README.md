@@ -31,12 +31,16 @@ Connection options are appended to the connection string, like a http url.
 Current supported options are;
 
 * `useSSL=true` - use ssl to connect (you need to do some java ssl magic to get it to work, look at the mysql documentation)
+* `serverCertificate=/path/to/certificate` - when using ssl to connect, allow to provide a reference to a certificate file for validating the server
 * `allowMultiQueries=true` - allow sending several queries in one round trip to the server
 * `connectTimeout=X` - have an X second connection timeout.
 * `createDB=true` - create the given database if it does not exist when connecting.
 * `enableBlobStreaming=true` - experimental support for PBMS blob streaming.
 * `noPrepStmtCache=true` - Disable prepared statement cache.
-
+* `stripQueryComments=false` - Disable prepared statement comments stripping.
+* `serverPublicKey=/path/to/publickey` - If sha256 password is used, the public can either be provided in this file or will be fetched directly from the server.
+* `enabledProtocols=protocol1,procotol2` - Force SSL protocol version list with a comma separated list with no space. Default is TLSv1,TLSv1.1,TLSv1.2
+* `enabledCipherSuites=cipher1,cipher2` - Enable only the given list of ciphers suites for this connection. Default is to allow all cipher suites supported by the running JVM
 
 Building and testing
 --------------------

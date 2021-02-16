@@ -40,7 +40,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
-import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -891,6 +890,7 @@ public class DrizzleStatement implements Statement {
     public void addBatch(final String sql) throws SQLException {
         this.protocol.addToBatch(queryFactory.createQuery(sql));
     }
+
     public void addBatch(final byte[] sql) throws SQLException {
         this.protocol.addToBatch(queryFactory.createQuery(sql));
     }
@@ -946,19 +946,7 @@ public class DrizzleStatement implements Statement {
      */
     public int[] executeBatch() throws SQLException {
         try {
-
-            final List<QueryResult> queryRes = protocol.executeBatch();
-            final int[] retVals = new int[queryRes.size()];
-            int i = 0;
-            for (final QueryResult qr : queryRes) {
-                if (qr.getResultSetType() == ResultSetType.MODIFY) {
-                    retVals[i++] =
-                            (int) ((ModifyQueryResult) qr).getUpdateCount(); //TODO: this needs to be handled according to javadoc
-                } else {
-                    retVals[i++] = SUCCESS_NO_INFO;
-                }
-            }
-            return retVals;
+            return protocol.executeBatch();
         } catch (QueryException e) {
             throw SQLExceptionMapper.get(e);
         }

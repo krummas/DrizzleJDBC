@@ -24,24 +24,54 @@
 
 package org.drizzle.jdbc.internal.mysql.packet.commands;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.Set;
+
 import org.drizzle.jdbc.internal.common.packet.CommandPacket;
 import org.drizzle.jdbc.internal.common.packet.buffer.WriteBuffer;
 import org.drizzle.jdbc.internal.mysql.MySQLServerCapabilities;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.Set;
-
 /**
  * used for starting ssl connections!
+ * 
+ * 
  */
 public class AbbreviatedMySQLClientAuthPacket implements CommandPacket {
     private final WriteBuffer writeBuffer;
 
+    /**
+     * 
+     * Creates a new <code>AbbreviatedMySQLClientAuthPacket</code> object, 
+     * sent by the client to initiate SSL handshake
+     * 
+     * MySQL Payload
+     * 4              capability flags, CLIENT_SSL always set
+     * 4              max-packet size
+     * 1              character set
+     * string[23]     reserved (all [0])
+     * 
+     * For MariaDB :
+     * 4              capability flags, CLIENT_SSL always set
+     * 4              max-packet size
+     * 1              character set
+     * string<19> reserved
+     * if not (server_capabilities & CLIENT_MYSQL)
+     *      int<4> extended client capabilities
+     * else
+     *      string<4> reserved
+     * 
+     * @param serverCapabilities
+     */
     public AbbreviatedMySQLClientAuthPacket(final Set<MySQLServerCapabilities> serverCapabilities) {
         writeBuffer = new WriteBuffer();
-        final int packetLength = 4;
         writeBuffer.writeInt(MySQLServerCapabilities.fromSet(serverCapabilities));
+        writeBuffer.writeInt(1024*1024*1024); /* max allowed packet : 1GB */
+        writeBuffer.writeByte((byte) 33);
+        byte[] filler = new byte[23];
+        Arrays.fill(filler, (byte) 0x00);
+        writeBuffer.writeByteArray(filler); /* filler */
     }
 
 

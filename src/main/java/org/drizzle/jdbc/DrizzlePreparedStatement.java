@@ -47,6 +47,7 @@ import org.drizzle.jdbc.internal.common.query.parameters.ReaderParameter;
 import org.drizzle.jdbc.internal.common.query.parameters.SerializableParameter;
 import org.drizzle.jdbc.internal.common.query.parameters.StreamParameter;
 import org.drizzle.jdbc.internal.common.query.parameters.StringParameter;
+import org.drizzle.jdbc.internal.common.query.parameters.JsonParameter;
 import org.drizzle.jdbc.internal.common.query.parameters.TimeParameter;
 import org.drizzle.jdbc.internal.common.query.parameters.TimestampParameter;
 import org.drizzle.jdbc.internal.common.queryresults.ModifyQueryResult;
@@ -1095,6 +1096,16 @@ public class DrizzlePreparedStatement extends DrizzleStatement implements Prepar
 
         setParameter(column, new StringParameter(s));
     }
+
+    public void setJson(final int column, final String s) throws SQLException {
+	if(s == null) {
+            setNull(column, Types.VARCHAR);
+            return;
+        }
+
+        setParameter(column, new JsonParameter(s));
+    }
+
 
     /**
      * Sets the designated parameter to the given Java array of bytes.  The driver converts this to an SQL

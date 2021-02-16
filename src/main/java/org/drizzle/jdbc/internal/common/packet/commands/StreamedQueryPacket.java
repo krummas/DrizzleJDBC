@@ -42,37 +42,39 @@ import org.drizzle.jdbc.internal.mysql.MySQLProtocol;
  */
 public class StreamedQueryPacket implements CommandPacket
 {
-
     // Maximum packet length coded on 3 bytes
-    private static final int MAX_PACKET_LENGTH =  0x00FFFFFF;
+    private static final int MAX_PACKET_LENGTH = 0x00FFFFFF;
 
     private final static Logger log = Logger
                                             .getLogger(StreamedQueryPacket.class
                                                     .getName());
 
-    private static final int HEADER_LENGTH = 4;
+    private final Query query;
 
-    private final Query         query;
-
-    public StreamedQueryPacket(final Query query)
-    {
-        this.query = query;
-
+    public StreamedQueryPacket(final Query query) {
+        this(query, MAX_PACKET_LENGTH);
     }
 
-    public int send(final OutputStream ostream) throws IOException,
-            QueryException
-    {
+    public StreamedQueryPacket(Query dQuery, int maxAllowedPacket) {
+        this.query = dQuery;
+    }
 
-        if (query.length() > MAX_PACKET_LENGTH - HEADER_LENGTH)
+    public int send(final OutputStream ostream) throws IOException, QueryException {
+
+        if (query.length() >= MAX_PACKET_LENGTH - 1)
         {
             // Query can not be sent on only one network packet
             return sendSplittedQuery(ostream);
         }
         else
         {
+            if (log.isLoggable(Level.FINEST))
+            {
+                log.finest("Sending full query (" + query.length() +" bytes)");
+            }
+            
             byte[] byteHeader = Utils.copyWithLength(
-                    intToByteArray( query.length() + 1), 5);
+                    intToByteArray(query.length() + 1), 5);
             byteHeader[3] = (byte) 0;
             byteHeader[4] = (byte) 0x03;
             ostream.write(byteHeader);
@@ -86,33 +88,40 @@ public class StreamedQueryPacket implements CommandPacket
     private int sendSplittedQuery(OutputStream ostream) throws QueryException,
             IOException
     {
+        if (log.isLoggable(Level.FINEST))
+        {
+            log.finest("Splitting query over several network packets");
+        } 
+        
         int remainingBytes = query.length();
         int offset = 0;
         int packetIndex = 0;
         while (remainingBytes >= 0L)
         {
-            int packLength = Math.min(remainingBytes, MAX_PACKET_LENGTH);
+            int packLength;
 
             byte[] byteHeader = null;
             if (packetIndex == 0)
             {
-                byteHeader = Utils.copyWithLength(intToByteArray(packLength), 5);
+                packLength = Math.min(remainingBytes, MAX_PACKET_LENGTH - 1);                
+                byteHeader = Utils.copyWithLength(intToByteArray(packLength + 1), 5);
                 // Add the command byte
                 byteHeader[4] = (byte) 0x03;
-                // And remove 1 byte from available data length
-                packLength -= 1;
             }
             else
             {
+                packLength = Math.min(remainingBytes, MAX_PACKET_LENGTH);
                 byteHeader = Utils.copyWithLength(intToByteArray(packLength), 4);
             }
             byteHeader[3] = (byte) packetIndex;
+            
             if(log.isLoggable(Level.FINEST)) {
                 log.finest("Sending packet " + packetIndex + " with length = "
                     + packLength + " / " + remainingBytes);
             }
             ostream.write(byteHeader);
-            if(log.isLoggable(Level.FINEST)) {           
+            if (log.isLoggable(Level.FINEST))
+            {
                 log.finest("Header is " + MySQLProtocol.hexdump(byteHeader, 0));
             }
             if (packLength > 0)
@@ -120,7 +129,7 @@ public class StreamedQueryPacket implements CommandPacket
                 query.writeTo(ostream, offset, packLength);
             }
             ostream.flush();
-            if (remainingBytes >= MAX_PACKET_LENGTH)
+            if (remainingBytes >= MAX_PACKET_LENGTH - (packetIndex == 0 ? 1 : 0))
             {
                 remainingBytes -= packLength;
                 offset += packLength;

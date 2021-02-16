@@ -51,7 +51,9 @@ public enum MySQLServerCapabilities {
     SECURE_CONNECTION((int) 32768),  /* New 4.1 authentication */
     MULTI_STATEMENTS((int) (1L << 16)), /* Enable/disable multi-stmt support */
     MULTI_RESULTS((int) (1L << 17)), /* Enable/disable multi-results */
-    DRIZZLE_CAPABILITIES_ADMIN((int) (1L<< 25));
+    DRIZZLE_CAPABILITIES_ADMIN((int) (1L<< 25)),
+    CLIENT_PLUGIN_AUTH ((int)0x00080000),
+    CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA ((int)0x00200000);
 
     private final int bitmapFlag;
 

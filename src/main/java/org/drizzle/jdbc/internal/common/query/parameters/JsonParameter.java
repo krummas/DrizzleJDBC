@@ -1,7 +1,7 @@
 /*
  * Drizzle-JDBC
  *
- * Copyright (c) 2009-2011, Marcus Eriksson, Marc Isambart, Stephane Giron
+ * Copyright (c) 2009-2011, Marcus Eriksson
  *
  * All rights reserved.
  *
@@ -22,74 +22,54 @@
  * TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.drizzle.jdbc.internal.common.query;
+package org.drizzle.jdbc.internal.common.query.parameters;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 
 /**
- * . User: marcuse Date: Feb 20, 2009 Time: 10:43:58 PM
+ * User: marcuse Date: Feb 18, 2009 Time: 10:17:14 PM
  */
-public class DrizzleQuery implements Query {
+public class JsonParameter implements ParameterHolder {
+    private final byte[] byteRepresentation;
 
-    private String query;
-    private final byte[] queryToSend;
-
-    public DrizzleQuery(final String query) {
-        this.query = query;
+    public JsonParameter(final String parameter) {
+        final String tempParam = jsonEscapeString(parameter);
         try {
-            queryToSend = query.getBytes("UTF-8");
+            this.byteRepresentation = tempParam.getBytes("UTF-8");
         } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("Unsupported encoding: " + e.getMessage(), e);
+            throw new RuntimeException("unsupp encoding: " + e.getMessage(), e);
         }
     }
 
-    public DrizzleQuery(final byte[] query) {
-        queryToSend = query;
+    public int writeTo(final OutputStream os, int offset, int maxWriteSize) throws IOException {
+        int bytesToWrite = Math.min(byteRepresentation.length - offset, maxWriteSize);
+        os.write(byteRepresentation, offset, bytesToWrite);
+        return bytesToWrite;
     }
 
-    public int length() {
-        return queryToSend.length;
+    public long length() {
+        return byteRepresentation.length;
     }
-
-    public void writeTo(final OutputStream os) throws IOException {
-        os.write(queryToSend, 0, queryToSend.length);
-    }
-
-    public String getQuery() {
-        if(query == null)
-            try {
-                this.query = new String(queryToSend, "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                throw new RuntimeException("Unsupported encoding: " + e.getMessage(), e);
+    /**
+     * escapes the given string, new string length is at most twice the length of str
+     *
+     * @param str the string to escape
+     * @return an escaped string
+     */
+    private String jsonEscapeString(final String str) {
+        StringBuilder buffer = new StringBuilder(str.length() * 2);
+        boolean neededEscaping = false;
+        for (int i = 0; i < str.length(); i++) {
+            final char c = str.charAt(i);
+            if (((byte) c) == '\\') {
+                neededEscaping = true;
+                buffer.append('\\');
             }
-        return query;
+            buffer.append(c);
+        }
+        return neededEscaping ? buffer.toString() : str;
     }
 
-    public QueryType getQueryType() {
-        return QueryType.classifyQuery(getQuery());
-    }
-
-    @Override
-    public boolean equals(final Object otherObj) {
-        return otherObj instanceof DrizzleQuery && (((DrizzleQuery) otherObj).getQuery()).equals(getQuery());
-    }
-
-    public void writeTo(OutputStream ostream, int offset, int packLength) throws IOException
-    {
-        ostream.write(queryToSend, offset, packLength);
-    }
-
-    @Override
-    public String toString()
-    {
-        return getQuery();
-    }
-
-    @Override
-    public byte[] getBytes()
-    {
-        return queryToSend;
-    }
 }

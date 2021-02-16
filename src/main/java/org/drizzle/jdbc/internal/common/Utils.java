@@ -146,10 +146,11 @@ public class Utils {
         return count;
     }
 
-
     public static List<String> createQueryParts(String query) {
         boolean isWithinDoubleQuotes = false;
         boolean isWithinQuotes = false;
+        boolean isWithinBackquotes = false;
+
         int queryPos = 0;
         int lastQueryPos = 0;
         List<String> queryParts = new LinkedList<String>();
@@ -157,19 +158,25 @@ public class Utils {
         for (int i = 0; i < query.length(); i++) {
             final char c = query.charAt(i);
 
-            if (c == '"' && !isWithinQuotes && !isWithinDoubleQuotes) {
+            if (c == '"' && !isWithinQuotes && !isWithinDoubleQuotes && !isWithinBackquotes) {
                 isWithinDoubleQuotes = true;
-            } else if (c == '"' && !isWithinQuotes) {
+            } else if (c == '"' && !isWithinQuotes && !isWithinBackquotes) {
                 isWithinDoubleQuotes = false;
             }
 
-            if (c == '\'' && !isWithinQuotes && !isWithinDoubleQuotes) {
+            if (c == '\'' && !isWithinQuotes && !isWithinDoubleQuotes && !isWithinBackquotes) {
                 isWithinQuotes = true;
-            } else if (c == '\'' && !isWithinDoubleQuotes) {
+            } else if (c == '\'' && !isWithinDoubleQuotes && !isWithinBackquotes) {
                 isWithinQuotes = false;
             }
 
-            if (!isWithinDoubleQuotes && !isWithinQuotes) {
+            if (c == '`' && !isWithinQuotes && !isWithinDoubleQuotes && !isWithinBackquotes) {
+                isWithinBackquotes = true;
+            } else if (c == '`' && !isWithinDoubleQuotes && !isWithinQuotes) {
+                isWithinBackquotes = false;
+            }
+
+            if (!isWithinDoubleQuotes && !isWithinQuotes && !isWithinBackquotes) {
                 if (c == '?') {
                     queryParts.add(query.substring(lastQueryPos, queryPos));
                     lastQueryPos = queryPos + 1;
@@ -181,7 +188,6 @@ public class Utils {
         return queryParts;
     }
 
-
     private enum ParsingState {
         WITHIN_COMMENT, WITHIN_QUOTES, WITHIN_DOUBLE_QUOTES, NORMAL
     }
@@ -190,7 +196,7 @@ public class Utils {
         final StringBuilder sb = new StringBuilder();
         ParsingState parsingState = ParsingState.NORMAL;
         ParsingState nextParsingState = ParsingState.NORMAL;
-        //final byte[] queryBytes = query.getBytes();
+        // final byte[] queryBytes = query.getBytes();
 
         for (int i = 0; i < query.length(); i++) {
             final char c = query.charAt(i);
@@ -275,6 +281,41 @@ public class Utils {
         return returnBytes;
     }
 
+    public static byte[] encryptPasswordSha256(final String password, final byte[] seed) throws NoSuchAlgorithmException {
+        if (password == null || password.equals("")) {
+            return new byte[0];
+        }
+
+        final MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+        final byte[] stage1 = messageDigest.digest(password.getBytes());
+        messageDigest.reset();
+
+        final byte[] stage2 = messageDigest.digest(stage1);
+        messageDigest.reset();
+
+        messageDigest.update(stage2);
+        messageDigest.update(seed);
+
+        final byte[] digest = messageDigest.digest();
+        final byte[] returnBytes = new byte[digest.length];
+        for (int i = 0; i < digest.length; i++) {
+            returnBytes[i] = (byte) (stage1[i] ^ digest[i]);
+        }
+        return returnBytes;
+    }
+
+    public static String hexdump(byte[] buffer, int offset) {
+        StringBuffer dump = new StringBuffer();
+        if ((buffer.length - offset) > 0) {
+            dump.append(String.format("%02x", buffer[offset]));
+            for (int i = offset + 1; i < buffer.length; i++) {
+                dump.append("_");
+                dump.append(String.format("%02x", buffer[i]));
+            }
+        }
+        return dump.toString();
+    }
+
     /**
      * packs the time portion of a millisecond time stamp into an int
      * <p/>
@@ -295,7 +336,6 @@ public class Utils {
      * @param milliseconds the milliseconds to pack
      * @return a packed integer containing the time
      */
-
 
     public static int packTime(final long milliseconds) {
         final int millis = (int) (milliseconds % 1000);
@@ -375,7 +415,7 @@ public class Utils {
                 java.util.Arrays.copyOf(new byte[0], 0);
                 isJava5 = false;
             } catch (java.lang.NoSuchMethodError e) {
-                 isJava5 = true;
+                isJava5 = true;
             }
             java5Determined = true;
         }
@@ -384,22 +424,24 @@ public class Utils {
 
     public static short byteArrayToShort(byte [] b) {
         int value = byteArrayToInt(b);
-        if(value > Short.MAX_VALUE)
+        if (value > Short.MAX_VALUE)
             return Short.MAX_VALUE;
-        if(value < Short.MIN_VALUE)
+        if (value < Short.MIN_VALUE)
             return Short.MIN_VALUE;
 
         return (short) value;
     }
-    public static byte byteArrayToByte(byte [] b) {
+
+    public static byte byteArrayToByte(byte[] b) {
         int value = byteArrayToInt(b);
-        if(value > Byte.MAX_VALUE)
+        if (value > Byte.MAX_VALUE)
             return Byte.MAX_VALUE;
-        if(value < Byte.MIN_VALUE)
+        if (value < Byte.MIN_VALUE)
             return Byte.MIN_VALUE;
 
         return (byte) value;
     }
+
     /**
      * convert a byte array to an int
      *
@@ -407,28 +449,28 @@ public class Utils {
      * @param b
      * @return
      */
-    public static int byteArrayToInt(byte [] b) {
+    public static int byteArrayToInt(byte[] b) {
         int sum = 0;
         int len = b.length;
-        
-        for(int i = 0; i < b.length; i++) {
-        	if(b[i] == '.'){
-        		len = i;
-        		break;
-        	}
+
+        for (int i = 0; i < b.length; i++) {
+            if (b[i] == '.') {
+                len = i;
+                break;
+            }
         }
 
         int limit = -Integer.MAX_VALUE;
         int startIdx = 0;
         boolean isPositive = true;
-        if(len > 1) {
-            byte x =  (byte) (b[0] - '0');
-            if(x < 0 || x > 9) {
-                if(b[0] == '+') {
+        if (len > 1) {
+            byte x = (byte) (b[0] - '0');
+            if (x < 0 || x > 9) {
+                if (b[0] == '+') {
                     isPositive = true;
                     limit = -Integer.MAX_VALUE;
                     startIdx++;
-                } else if(b[0] == '-') {
+                } else if (b[0] == '-') {
                     isPositive = false;
                     limit = Integer.MIN_VALUE;
                     startIdx++;
@@ -436,44 +478,45 @@ public class Utils {
             }
 
         }
-        int factor = (int) Math.pow(10, len-1-startIdx);
-        for(int i = startIdx; i < len; i++) {
+        int factor = (int) Math.pow(10, len - 1 - startIdx);
+        for (int i = startIdx; i < len; i++) {
             byte x = (byte) (b[i] - '0');
             if(x < 0 || x > 9) throw new NumberFormatException("Could not parse as int");
             int oldSum = sum;
             sum -= (x * factor);
-            if(sum > oldSum || sum < limit) {
-                if(isPositive)
+            if (sum > oldSum || sum < limit) {
+                if (isPositive)
                     return Integer.MAX_VALUE;
                 else
                     return Integer.MIN_VALUE;
             }
-            factor/=10;
+            factor /= 10;
         }
-        return isPositive?-sum:sum;
+        return isPositive ? -sum : sum;
     }
-    public static long byteArrayToLong(byte [] b) {
+
+    public static long byteArrayToLong(byte[] b) {
         long sum = 0;
         int len = b.length;
-        
-        for(int i = 0; i < b.length; i++) {
-        	if(b[i] == '.'){
-        		len = i;
-        		break;
-        	}
+
+        for (int i = 0; i < b.length; i++) {
+            if (b[i] == '.') {
+                len = i;
+                break;
+            }
         }
 
         long limit = -Long.MAX_VALUE;
         int startIdx = 0;
         boolean isPositive = true;
-        if(len > 1) {
-            byte x =  (byte) (b[0] - '0');
-            if(x < 0 || x > 9) {
-                if(b[0] == '+') {
+        if (len > 1) {
+            byte x = (byte) (b[0] - '0');
+            if (x < 0 || x > 9) {
+                if (b[0] == '+') {
                     isPositive = true;
                     limit = -Long.MAX_VALUE;
                     startIdx++;
-                } else if(b[0] == '-') {
+                } else if (b[0] == '-') {
                     isPositive = false;
                     limit = Long.MIN_VALUE;
                     startIdx++;
@@ -481,21 +524,21 @@ public class Utils {
             }
 
         }
-        long factor = (long) Math.pow(10, len-1-startIdx);
-        for(int i = startIdx; i < len; i++) {
+        long factor = (long) Math.pow(10, len - 1 - startIdx);
+        for (int i = startIdx; i < len; i++) {
             byte x = (byte) (b[i] - '0');
             if(x < 0 || x > 9) throw new NumberFormatException("Could not parse as long");
             long oldSum = sum;
             sum -= (x * factor);
-            if(sum > oldSum || sum < limit) {
-                if(isPositive)
+            if (sum > oldSum || sum < limit) {
+                if (isPositive)
                     return Long.MAX_VALUE;
                 else
                     return Long.MIN_VALUE;
             }
-            factor/=10;
+            factor /= 10;
         }
-        return isPositive?-sum:sum;
-        //return Integer.MAX_VALUE;
+        return isPositive ? -sum : sum;
+        // return Integer.MAX_VALUE;
     }
 }
