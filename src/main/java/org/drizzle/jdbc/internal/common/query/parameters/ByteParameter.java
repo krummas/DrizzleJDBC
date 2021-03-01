@@ -39,8 +39,8 @@ public class ByteParameter implements ParameterHolder {
     private final byte[] buffer;
 
     public ByteParameter(final byte[] x) {
-        buffer = new byte[x.length * 2 + 2];
-        System.arraycopy("0x".getBytes(), 0, buffer, 0, 2);
+        buffer = new byte[x.length * 2 + 3];
+        System.arraycopy("x'".getBytes(), 0, buffer, 0, 2);
         int j = 2;
         for (int i = 0; i < x.length; i++)
         {
@@ -48,6 +48,7 @@ public class ByteParameter implements ParameterHolder {
             buffer[j++] = bytes[(b & 0xF0) >>> 4];
             buffer[j++] = bytes[b & 0x0F];
         }
+        buffer[j] = '\'';
     }
 
     public int writeTo(final OutputStream os, int offset, int maxWriteSize) throws IOException {
