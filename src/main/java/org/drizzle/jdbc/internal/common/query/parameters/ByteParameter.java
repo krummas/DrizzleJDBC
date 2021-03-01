@@ -24,8 +24,6 @@
 
 package org.drizzle.jdbc.internal.common.query.parameters;
 
-import static org.drizzle.jdbc.internal.common.Utils.needsEscaping;
-
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -33,30 +31,32 @@ import java.io.OutputStream;
  * . User: marcuse Date: Feb 27, 2009 Time: 9:56:17 PM
  */
 public class ByteParameter implements ParameterHolder {
+    
+    // 0 to 9, A to F
+    private static final byte[] bytes = new byte[] { 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+            0x38, 0x39, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46};
+    
     private final byte[] buffer;
-    private final int length;
 
     public ByteParameter(final byte[] x) {
         buffer = new byte[x.length * 2 + 2];
-        int pos = 0;
-        buffer[pos++] = '\'';
-        for (final byte b : x) {
-            if (needsEscaping(b)) {
-                buffer[pos++] = '\\';
-            }
-            buffer[pos++] = b;
+        System.arraycopy("0x".getBytes(), 0, buffer, 0, 2);
+        int j = 2;
+        for (int i = 0; i < x.length; i++)
+        {
+            byte b = x[i];
+            buffer[j++] = bytes[(b & 0xF0) >>> 4];
+            buffer[j++] = bytes[b & 0x0F];
         }
-        buffer[pos++] = '\'';
-        this.length = pos;
     }
 
-
     public int writeTo(final OutputStream os, int offset, int maxWriteSize) throws IOException {
-        int bytesToWrite = Math.min(length - offset, maxWriteSize);
+        int bytesToWrite = Math.min(buffer.length - offset, maxWriteSize);
         os.write(buffer, offset, bytesToWrite);
         return bytesToWrite;
     }
     public long length() {
-        return length;
+        return buffer.length;
     }
+    
 }
