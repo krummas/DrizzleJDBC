@@ -37,11 +37,13 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -59,7 +61,6 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
-import java.security.cert.X509Certificate;
 
 import org.drizzle.jdbc.DrizzleResultSet;
 import org.drizzle.jdbc.internal.SQLExceptionMapper;
@@ -199,6 +200,21 @@ public class MySQLProtocol implements Protocol {
             BufferedInputStream reader = new BufferedInputStream(socket.getInputStream(), 32768);
             packetFetcher = new SyncPacketFetcher(reader);
             writer = new BufferedOutputStream(socket.getOutputStream(), 32768);
+
+            // Proxy protocol v1 implementation according to spec found at:
+            // http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt
+            // Enabling and passing proxy protocol parameters is done through connection properties
+            if (Boolean.valueOf(info.getProperty("proxyProtocol"))){
+                StringBuilder proxyProtocolHeader = new StringBuilder("PROXY ")
+                        .append(info.getProperty("proxyProtocol.tcpVersion")).append(" ")
+                        .append(info.getProperty("proxyProtocol.clientAddress")).append(" ")
+                        .append(info.getProperty("proxyProtocol.connectedToIPAddress")).append(" ")
+                        .append(info.getProperty("proxyProtocol.clientPort")).append(" ")
+                        .append(info.getProperty("proxyProtocol.localPort")).append("\r\n");
+                log.finest("Sending proxy protocol header: " + proxyProtocolHeader.toString());
+                writer.write(proxyProtocolHeader.toString().getBytes(Charset.forName("ASCII")));
+            }
+
             final MySQLGreetingReadPacket greetingPacket = new MySQLGreetingReadPacket(packetFetcher.getRawPacket());
             this.serverThreadId = greetingPacket.getServerThreadID();
 
