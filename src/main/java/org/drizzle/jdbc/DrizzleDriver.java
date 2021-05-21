@@ -103,7 +103,7 @@ public final class DrizzleDriver implements java.sql.Driver {
         String [] parameters = urlParameters.split("&");
         for(String param : parameters) {
             String [] keyVal = param.split("=");
-            info.setProperty(keyVal[0], keyVal[1]);
+            info.setProperty(keyVal[0], (keyVal.length > 1 ? keyVal[1] : ""));
         }
     }
 
