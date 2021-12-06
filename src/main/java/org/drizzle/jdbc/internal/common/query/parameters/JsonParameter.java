@@ -35,11 +35,11 @@ public class JsonParameter implements ParameterHolder {
     private final byte[] byteRepresentation;
 
     public JsonParameter(final String parameter) {
-        final String tempParam = jsonEscapeString(parameter);
+		final String tempParam = parameter;
         try {
             this.byteRepresentation = tempParam.getBytes("UTF-8");
         } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("unsupp encoding: " + e.getMessage(), e);
+            throw new RuntimeException("Unsupported encoding: " + e.getMessage(), e);
         }
     }
 
@@ -52,24 +52,4 @@ public class JsonParameter implements ParameterHolder {
     public long length() {
         return byteRepresentation.length;
     }
-    /**
-     * escapes the given string, new string length is at most twice the length of str
-     *
-     * @param str the string to escape
-     * @return an escaped string
-     */
-    private String jsonEscapeString(final String str) {
-        StringBuilder buffer = new StringBuilder(str.length() * 2);
-        boolean neededEscaping = false;
-        for (int i = 0; i < str.length(); i++) {
-            final char c = str.charAt(i);
-            if (((byte) c) == '\\') {
-                neededEscaping = true;
-                buffer.append('\\');
-            }
-            buffer.append(c);
-        }
-        return neededEscaping ? buffer.toString() : str;
-    }
-
 }
