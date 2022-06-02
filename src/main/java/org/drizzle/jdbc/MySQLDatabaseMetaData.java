@@ -249,5 +249,23 @@ public final class MySQLDatabaseMetaData extends CommonDatabaseMetaData {
         return false;
     }
 
+    @Override
+    public boolean storesLowerCaseIdentifiers() throws SQLException
+    {
+        final Statement stmt = getConnection().createStatement();
+        ResultSet rs = null;
+        try
+        {
+            rs = stmt.executeQuery(
+                    "SHOW VARIABLES LIKE 'lower_case_table_names'");
 
+            if (rs.next())
+                return (rs.getInt(2) == 1);
+        }
+        finally {
+            if(rs != null)
+                rs.close();
+        }
+        return super.storesLowerCaseIdentifiers();
+    }
 }
