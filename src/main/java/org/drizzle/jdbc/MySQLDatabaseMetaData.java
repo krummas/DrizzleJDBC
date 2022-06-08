@@ -24,11 +24,12 @@
 
 package org.drizzle.jdbc;
 
-import org.drizzle.jdbc.internal.SQLExceptionMapper;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+
+import org.drizzle.jdbc.internal.SQLExceptionMapper;
 
 public final class MySQLDatabaseMetaData extends CommonDatabaseMetaData {
     public MySQLDatabaseMetaData(CommonDatabaseMetaData.Builder builder) {
@@ -265,6 +266,7 @@ public final class MySQLDatabaseMetaData extends CommonDatabaseMetaData {
         finally {
             if(rs != null)
                 rs.close();
+            stmt.close();
         }
         return super.storesLowerCaseIdentifiers();
     }
