@@ -772,6 +772,8 @@ public class MySQLProtocol implements Protocol {
                 switch (resultPacket.getResultType())
                 {
                     case ERROR :
+                    	// no more results after error
+                        this.hasMoreResults = false;
                         final ErrorPacket ep = (ErrorPacket) resultPacket;
                         checkIfCancelled();
                         throw new QueryException(ep.getMessage(),
