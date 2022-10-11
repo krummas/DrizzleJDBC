@@ -735,7 +735,7 @@ public class MySQLProtocol implements Protocol {
         else if(batchList.size() > 0)
         {
             // No need to try to send batch if empty
-            this.hasMoreResults = false;
+        	boolean moreBatchResults = false;
             final BatchStreamedQueryPacket packet = new BatchStreamedQueryPacket(batchList, batchSize);
 
             try {
@@ -773,14 +773,14 @@ public class MySQLProtocol implements Protocol {
                 {
                     case ERROR :
                     	// no more results after error
-                        this.hasMoreResults = false;
+                    	moreBatchResults = false;
                         final ErrorPacket ep = (ErrorPacket) resultPacket;
                         checkIfCancelled();
                         throw new QueryException(ep.getMessage(),
                                 ep.getErrorNumber(), ep.getSqlState());
                     case OK :
                         final OKPacket okpacket = (OKPacket) resultPacket;
-                        this.hasMoreResults = okpacket.getServerStatus()
+                        moreBatchResults = okpacket.getServerStatus()
                                 .contains(ServerStatus.MORE_RESULTS_EXISTS);
                         result[resIndex++] = (int) okpacket.getAffectedRows();
                         break;
@@ -788,7 +788,7 @@ public class MySQLProtocol implements Protocol {
                         result[resIndex++] = Statement.SUCCESS_NO_INFO;
                         try
                         {
-                            this.hasMoreResults = existsMoreResultsAfterResultset(
+                        	moreBatchResults = existsMoreResultsAfterResultset(
                                     (ResultSetPacket) resultPacket);
                         }
                         catch (IOException e)
@@ -811,7 +811,7 @@ public class MySQLProtocol implements Protocol {
                                         .getSqlState());
                 }
 
-            } while (this.hasMoreResults);
+            } while (moreBatchResults);
         }
         clearBatch();
         return result;
