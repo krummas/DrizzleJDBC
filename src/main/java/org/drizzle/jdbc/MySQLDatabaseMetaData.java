@@ -131,6 +131,41 @@ public final class MySQLDatabaseMetaData extends CommonDatabaseMetaData {
         final Statement stmt = getConnection().createStatement();
         return stmt.executeQuery(query);
     }
+
+    public ResultSet getColumns(final String schemaName, final String tableName)
+            throws SQLException
+    {
+            final String query = "SELECT null as table_cat," +
+                    "            table_schema as table_schem," +
+                    "            table_name," +
+                    "            column_name," +
+                    dataTypeClause + " data_type," +
+                    "            column_type type_name," +
+                    "            character_maximum_length column_size," +
+                    "            0 buffer_length," +
+                    "            numeric_precision decimal_digits," +
+                    "            numeric_scale num_prec_radix," +
+                    "            if(is_nullable=CONVERT('yes' USING utf8) collate utf8_general_ci,1,0) nullable," +
+                    "            column_comment remarks," +
+                    "            column_default column_def," +
+                    "            0 sql_data," +
+                    "            0 sql_datetime_sub," +
+                    "            character_octet_length char_octet_length," +
+                    "            ordinal_position," +
+                    "            is_nullable," +
+                    "            null scope_catalog," +
+                    "            null scope_schema," +
+                    "            null scope_table," +
+                    "            extra source_data_type," +
+                    "            '' is_autoincrement" +
+                    "    FROM information_schema.columns " +
+                    "WHERE table_schema = '" + schemaName + "'" +
+                    " AND table_name = '" + tableName + "'" +
+                    " ORDER BY table_cat, table_schem, table_name, ordinal_position";
+            final Statement stmt = getConnection().createStatement();
+            return stmt.executeQuery(query);
+        }
+
     public ResultSet getExportedKeys(final String catalog, final String schema, final String table) throws SQLException {
         final String query = "SELECT null PKTABLE_CAT, \n" +
                 "kcu.referenced_table_schema PKTABLE_SCHEM, \n" +
