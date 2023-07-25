@@ -28,10 +28,19 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.drizzle.jdbc.internal.SQLExceptionMapper;
 
 public final class MySQLDatabaseMetaData extends CommonDatabaseMetaData {
+    
+    private Pattern versionPattern = Pattern
+            .compile("(\\d+)\\.(\\d+)\\.(\\d+).*?", Pattern.CASE_INSENSITIVE);
+
+    private int majorVersion = -1;
+    private int minorVersion = -1;
+
     public MySQLDatabaseMetaData(CommonDatabaseMetaData.Builder builder) {
         super(builder);
     }
@@ -304,5 +313,41 @@ public final class MySQLDatabaseMetaData extends CommonDatabaseMetaData {
             stmt.close();
         }
         return super.storesLowerCaseIdentifiers();
+    }
+
+    @Override
+    public int getDatabaseMajorVersion() throws SQLException
+    {
+        if (majorVersion == -1)
+        {
+            parseVersion();
+        }
+        return majorVersion;
+    }
+
+    @Override
+    public int getDatabaseMinorVersion() throws SQLException
+    {
+        if (minorVersion == -1)
+        {
+            parseVersion();
+        }
+        return minorVersion;
+    }
+
+    private void parseVersion() throws SQLException
+    {
+        String version = getDatabaseProductVersion();
+        Matcher m = versionPattern.matcher(version);
+        if(m.find())
+        {
+            majorVersion = Integer.parseInt(m.group(1));
+            minorVersion = Integer.parseInt(m.group(2));
+        }
+        else
+        {
+            majorVersion = 0;
+            minorVersion = 0;
+        }
     }
 }
