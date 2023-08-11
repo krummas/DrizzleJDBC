@@ -279,13 +279,13 @@ public class MySQLProtocol implements Protocol {
                      sslSocketFactory= (SSLSocketFactory) SSLSocketFactory.getDefault();
 
                 SSLSocket sslSocket = (SSLSocket) sslSocketFactory.createSocket(socket,
-                        socket.getInetAddress().getHostAddress(), socket.getPort(), false);
+                        socket.getInetAddress().getHostAddress(), socket.getPort(), true);
                 sslSocket.setTcpNoDelay(true);
 
                 // Provide a way to enable a given set of SSL protocols through
                 // comma-no-space list in the URL parameter
                 String[] enabledProtocols = new String[]{"TLSv1", "TLSv1.1",
-                        "TLSv1.2"};
+                        "TLSv1.2", "TLSv1.3" };
                 if (info.getProperty("enabledProtocols") != null)
                 {
                     // no additional check: it's of user's responsibility to
@@ -430,9 +430,11 @@ public class MySQLProtocol implements Protocol {
             final ClosePacket closePacket = new ClosePacket();
             closePacket.send(writer);
             if (!(socket instanceof SSLSocket))
+            {
                 socket.shutdownOutput();
-            writer.close();
-            packetFetcher.close();
+                writer.close();
+                packetFetcher.close();
+            }
         } catch (IOException e) {
             throw new QueryException("Could not close connection: " + e.getMessage(),
                     -1,
