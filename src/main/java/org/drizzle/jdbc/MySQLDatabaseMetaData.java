@@ -24,13 +24,23 @@
 
 package org.drizzle.jdbc;
 
-import org.drizzle.jdbc.internal.SQLExceptionMapper;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.drizzle.jdbc.internal.SQLExceptionMapper;
 
 public final class MySQLDatabaseMetaData extends CommonDatabaseMetaData {
+    
+    private Pattern versionPattern = Pattern
+            .compile("(\\d+)\\.(\\d+)\\.(\\d+).*?", Pattern.CASE_INSENSITIVE);
+
+    private int majorVersion = -1;
+    private int minorVersion = -1;
+
     public MySQLDatabaseMetaData(CommonDatabaseMetaData.Builder builder) {
         super(builder);
     }
@@ -44,7 +54,7 @@ public final class MySQLDatabaseMetaData extends CommonDatabaseMetaData {
                 "ordinal_position KEY_SEQ," +
                 "null pk_name " +
                 "FROM information_schema.columns " +
-                "WHERE table_name='" + table + "' AND column_key='pri'";
+                "WHERE table_name='" + table + "' AND column_key='PRI'";
 
         if (schema != null) {
             query += " AND table_schema = '" + schema + "'";
@@ -109,7 +119,7 @@ public final class MySQLDatabaseMetaData extends CommonDatabaseMetaData {
                 "            0 buffer_length," +
                 "            numeric_precision decimal_digits," +
                 "            numeric_scale num_prec_radix," +
-                "            if(is_nullable='yes',1,0) nullable," +
+                "            if(is_nullable=CONVERT('yes' USING utf8) collate utf8_general_ci,1,0) nullable," +
                 "            column_comment remarks," +
                 "            column_default column_def," +
                 "            0 sql_data," +
@@ -120,7 +130,7 @@ public final class MySQLDatabaseMetaData extends CommonDatabaseMetaData {
                 "            null scope_catalog," +
                 "            null scope_schema," +
                 "            null scope_table," +
-                "            null source_data_type," +
+                "            extra source_data_type," +
                 "            '' is_autoincrement" +
                 "    FROM information_schema.columns " +
                 "WHERE table_schema LIKE '" + ((schemaPattern == null) ? "%" : schemaPattern) + "'" +
@@ -130,6 +140,41 @@ public final class MySQLDatabaseMetaData extends CommonDatabaseMetaData {
         final Statement stmt = getConnection().createStatement();
         return stmt.executeQuery(query);
     }
+
+    public ResultSet getColumns(final String schemaName, final String tableName)
+            throws SQLException
+    {
+            final String query = "SELECT null as table_cat," +
+                    "            table_schema as table_schem," +
+                    "            table_name," +
+                    "            column_name," +
+                    dataTypeClause + " data_type," +
+                    "            column_type type_name," +
+                    "            character_maximum_length column_size," +
+                    "            0 buffer_length," +
+                    "            numeric_precision decimal_digits," +
+                    "            numeric_scale num_prec_radix," +
+                    "            if(is_nullable=CONVERT('yes' USING utf8) collate utf8_general_ci,1,0) nullable," +
+                    "            column_comment remarks," +
+                    "            column_default column_def," +
+                    "            0 sql_data," +
+                    "            0 sql_datetime_sub," +
+                    "            character_octet_length char_octet_length," +
+                    "            ordinal_position," +
+                    "            is_nullable," +
+                    "            null scope_catalog," +
+                    "            null scope_schema," +
+                    "            null scope_table," +
+                    "            extra source_data_type," +
+                    "            '' is_autoincrement" +
+                    "    FROM information_schema.columns " +
+                    "WHERE table_schema = '" + schemaName + "'" +
+                    " AND table_name = '" + tableName + "'" +
+                    " ORDER BY table_cat, table_schem, table_name, ordinal_position";
+            final Statement stmt = getConnection().createStatement();
+            return stmt.executeQuery(query);
+        }
+
     public ResultSet getExportedKeys(final String catalog, final String schema, final String table) throws SQLException {
         final String query = "SELECT null PKTABLE_CAT, \n" +
                 "kcu.referenced_table_schema PKTABLE_SCHEM, \n" +
@@ -249,5 +294,60 @@ public final class MySQLDatabaseMetaData extends CommonDatabaseMetaData {
         return false;
     }
 
+    @Override
+    public boolean storesLowerCaseIdentifiers() throws SQLException
+    {
+        final Statement stmt = getConnection().createStatement();
+        ResultSet rs = null;
+        try
+        {
+            rs = stmt.executeQuery(
+                    "SHOW VARIABLES LIKE 'lower_case_table_names'");
 
+            if (rs.next())
+                return (rs.getInt(2) == 1);
+        }
+        finally {
+            if(rs != null)
+                rs.close();
+            stmt.close();
+        }
+        return super.storesLowerCaseIdentifiers();
+    }
+
+    @Override
+    public int getDatabaseMajorVersion() throws SQLException
+    {
+        if (majorVersion == -1)
+        {
+            parseVersion();
+        }
+        return majorVersion;
+    }
+
+    @Override
+    public int getDatabaseMinorVersion() throws SQLException
+    {
+        if (minorVersion == -1)
+        {
+            parseVersion();
+        }
+        return minorVersion;
+    }
+
+    private void parseVersion() throws SQLException
+    {
+        String version = getDatabaseProductVersion();
+        Matcher m = versionPattern.matcher(version);
+        if(m.find())
+        {
+            majorVersion = Integer.parseInt(m.group(1));
+            minorVersion = Integer.parseInt(m.group(2));
+        }
+        else
+        {
+            majorVersion = 0;
+            minorVersion = 0;
+        }
+    }
 }

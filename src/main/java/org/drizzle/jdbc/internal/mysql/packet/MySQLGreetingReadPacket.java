@@ -40,16 +40,24 @@ public class MySQLGreetingReadPacket {
     private final String serverVersion;
     private final byte protocolVersion;
     private final long serverThreadID;
-    //private final byte[] seed1;
-    //private final byte[] seed2;
     private final Set<MySQLServerCapabilities> serverCapabilities;
     private final byte serverLanguage;
     private final Set<ServerStatus> serverStatus;
     private final byte[] seed;
+    private final String authPlugin;
+    private final byte packetSeq;
 
     public MySQLGreetingReadPacket(final RawPacket rawPacket) throws IOException {
         final Reader reader = new Reader(rawPacket);
+        this.packetSeq = reader.getPacketSeq();
         protocolVersion = reader.readByte();
+        if (protocolVersion == -1) {
+            // That's a connection error. Errno will come first, we read and ignore it because we
+            // cannot pass it trough the IOException. Error message will be sufficient
+            // short errno = 
+            reader.readShort();
+            throw new IOException(reader.readString("ASCII"));
+        }
         serverVersion = reader.readString("ASCII");
         serverThreadID = reader.readInt();
         final byte[] seed1 = reader.readRawBytes(8);
@@ -62,29 +70,25 @@ public class MySQLGreetingReadPacket {
         seed = Utils.copyWithLength(seed1, seed1.length + seed2.length);
         System.arraycopy(seed2, 0, seed, seed1.length, seed2.length);
         reader.readByte(); // seems the seed is null terminated
+        if (serverCapabilities.contains(MySQLServerCapabilities.CLIENT_PLUGIN_AUTH)) {
+            authPlugin = reader.readString("ASCII");
+        } else
+            authPlugin = null;
     }
 
     @Override
     public String toString() {
-        return protocolVersion + ":" +
-                serverVersion + ":" +
-                serverThreadID + ":" +
-                new String(seed) + ":" +
-                serverCapabilities + ":" +
-                serverLanguage + ":" +
-                serverStatus;
+        return protocolVersion + ":" + serverVersion + ":" + serverThreadID + ":" + new String(seed) + ":"
+                + serverCapabilities + ":" + serverLanguage + ":" + serverStatus + ":" + authPlugin;
     }
-
 
     public String getServerVersion() {
         return serverVersion;
     }
 
-
     public byte getProtocolVersion() {
         return protocolVersion;
     }
-
 
     public long getServerThreadID() {
         return serverThreadID;
@@ -104,5 +108,13 @@ public class MySQLGreetingReadPacket {
 
     public Set<ServerStatus> getServerStatus() {
         return serverStatus;
+    }
+
+    public String getAuthPlugin() {
+        return authPlugin;
+    }
+
+    public byte getPacketSeq() {
+        return packetSeq;
     }
 }

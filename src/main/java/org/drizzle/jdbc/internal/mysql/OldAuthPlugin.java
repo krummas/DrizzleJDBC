@@ -1,7 +1,7 @@
 /*
  * Drizzle-JDBC
  *
- * Copyright (c) 2009-2011, Marcus Eriksson
+ * Copyright (c) 2009-2019, Marcus Eriksson, Stephane Giron, Marc Isambart, Trond Norbye
  *
  * All rights reserved.
  *
@@ -21,43 +21,43 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
  * TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-package org.drizzle.jdbc.internal.common.query.parameters;
+package org.drizzle.jdbc.internal.mysql;
 
 import java.io.IOException;
-import java.io.OutputStream;
 
-/**
- * . User: marcuse Date: Feb 27, 2009 Time: 9:56:17 PM
- */
-public class ByteParameter implements ParameterHolder {
-    
-    // 0 to 9, A to F
-    private static final byte[] bytes = new byte[] { 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
-            0x38, 0x39, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46};
-    
-    private final byte[] buffer;
+import org.drizzle.jdbc.internal.common.QueryException;
+import org.drizzle.jdbc.internal.common.Utils;
+import org.drizzle.jdbc.internal.common.packet.RawPacket;
+import org.drizzle.jdbc.internal.mysql.packet.MySQLAuthSwitchRequest;
+import org.drizzle.jdbc.internal.mysql.packet.commands.MySQLClientOldPasswordAuthPacket;
 
-    public ByteParameter(final byte[] x) {
-        buffer = new byte[x.length * 2 + 3];
-        System.arraycopy("x'".getBytes(), 0, buffer, 0, 2);
-        int j = 2;
-        for (int i = 0; i < x.length; i++)
-        {
-            byte b = x[i];
-            buffer[j++] = bytes[(b & 0xF0) >>> 4];
-            buffer[j++] = bytes[b & 0x0F];
-        }
-        buffer[j] = '\'';
+public class OldAuthPlugin implements AuthPlugin {
+
+    
+    private MySQLAuthSwitchRequest authSwitchRequest;
+
+    public OldAuthPlugin(MySQLAuthSwitchRequest authSwitchPacket) {
+        this.authSwitchRequest = authSwitchPacket;
     }
 
-    public int writeTo(final OutputStream os, int offset, int maxWriteSize) throws IOException {
-        int bytesToWrite = Math.min(buffer.length - offset, maxWriteSize);
-        os.write(buffer, offset, bytesToWrite);
-        return bytesToWrite;
+    public RawPacket authenticate(MySQLProtocol protocol) throws IOException, QueryException {
+        
+        final MySQLClientOldPasswordAuthPacket oldPassPacket = new MySQLClientOldPasswordAuthPacket(
+                protocol.getPassword(), Utils.copyWithLength(authSwitchRequest.getGreetingPacket().getSeed(), 8), authSwitchRequest.getPacketSeq() + 1);
+        oldPassPacket.send(protocol.getWriter());
+        return protocol.getPacketFetcher().getRawPacket();
     }
-    public long length() {
-        return buffer.length;
+
+    public byte[] getEncodedPassword(String password, boolean ssl) {
+        return null;
     }
     
+    public String getDefaultPlugin() {
+        return "mysql_native_password";
+    }
+
+    public RawPacket readAuthMoreData(RawPacket rp, MySQLProtocol protocol) throws QueryException
+    {
+        throw new QueryException("Don't know how to read auth more data in old auth plugin!");
+    }
 }

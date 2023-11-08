@@ -4,7 +4,7 @@
     <artifactId>drizzle-jdbc</artifactId>
     <packaging>jar</packaging>
     <name>Drizzle-JDBC</name>
-    <version>1.5-SNAPSHOT</version>
+    <version>1.5.18-SNAPSHOT</version>
     <description>BSD Licensed JDBC driver for Drizzle and MySQL</description>
     <url>https://github.com/krummas/DrizzleJDBC</url>
     <properties>
@@ -56,8 +56,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>1.5</source>
-                    <target>1.5</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
             </plugin>
             <plugin>
@@ -99,6 +99,9 @@
 	    <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-javadoc-plugin</artifactId>
+              <configuration>
+                  <source>8</source>
+              </configuration> 
               <executions>
 		<execution>
                   <id>attach-javadocs</id>
@@ -175,4 +178,16 @@
       <artifactId>oss-parent</artifactId>
       <version>6</version>
     </parent>
+    <profiles>
+    <profile>
+        <id>disable-java8-doclint</id>
+        <activation>
+            <jdk>[1.8,)</jdk>
+        </activation>
+        <properties>
+            <doclint>none</doclint>
+        </properties>
+    </profile>
+</profiles>
+    
 </project>

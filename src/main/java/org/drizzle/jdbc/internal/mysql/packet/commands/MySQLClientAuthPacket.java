@@ -24,15 +24,16 @@
 
 package org.drizzle.jdbc.internal.mysql.packet.commands;
 
-import org.drizzle.jdbc.internal.common.Utils;
-import org.drizzle.jdbc.internal.common.packet.CommandPacket;
-import org.drizzle.jdbc.internal.common.packet.buffer.WriteBuffer;
-import org.drizzle.jdbc.internal.mysql.MySQLServerCapabilities;
-
 import java.io.IOException;
 import java.io.OutputStream;
-import java.security.NoSuchAlgorithmException;
 import java.util.Set;
+
+import org.drizzle.jdbc.internal.common.QueryException;
+import org.drizzle.jdbc.internal.common.packet.CommandPacket;
+import org.drizzle.jdbc.internal.common.packet.buffer.WriteBuffer;
+import org.drizzle.jdbc.internal.mysql.AuthPlugin;
+import org.drizzle.jdbc.internal.mysql.AuthPluginFactory;
+import org.drizzle.jdbc.internal.mysql.MySQLServerCapabilities;
 
 /**
  * 4                            client_flags 4                            max_packet_size 1 charset_number 23 (filler)
@@ -62,37 +63,40 @@ public class MySQLClientAuthPacket implements CommandPacket {
     private final WriteBuffer writeBuffer;
     private final byte packetSeq;
 
-    public MySQLClientAuthPacket(final String username,
-                                 final String password,
-                                 final String database,
-                                 final Set<MySQLServerCapabilities> serverCapabilities,
-                                 final byte[] seed, byte packetSeq) {
+    public MySQLClientAuthPacket(final String username, final String password, final String database,
+            final Set<MySQLServerCapabilities> serverCapabilities, final byte[] seed, byte packetSeq,
+            String defaultAuthPlugin, boolean useSSL) throws QueryException {
         this.packetSeq = packetSeq;
         writeBuffer = new WriteBuffer();
         final byte[] scrambledPassword;
-        try {
-            scrambledPassword = Utils.encryptPassword(password, seed);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Could not use SHA-1, failing", e);
-        }
+
+        AuthPlugin authPlugin = AuthPluginFactory.getAuthPlugin(defaultAuthPlugin, seed);
+        scrambledPassword = authPlugin.getEncodedPassword(password, useSSL);
 
         final byte serverLanguage = 33;
         writeBuffer.writeInt(MySQLServerCapabilities.fromSet(serverCapabilities)).
                 writeInt(0xffffff).
-                writeByte(serverLanguage). //1
-                writeBytes((byte) 0, 23).    //23
-                writeString(username).     //strlen username
-                writeByte((byte) 0).        //1
+                writeByte(serverLanguage). // 1
+                writeBytes((byte) 0, 23). // 23
+                writeString(username). // strlen username
+                writeByte((byte) 0). // 1
                 writeByte((byte) scrambledPassword.length).
-                writeByteArray(scrambledPassword). //scrambledPassword.length
-                writeString(database).     //strlen(database)
-                writeByte((byte) 0);
-    }
+                writeByteArray(scrambledPassword);
 
+        if (serverCapabilities.contains(MySQLServerCapabilities.CONNECT_WITH_DB)) {
+            writeBuffer.writeString(database).writeByte((byte) 0);
+        }
+        
+        if(serverCapabilities.contains(MySQLServerCapabilities.CLIENT_PLUGIN_AUTH))
+        {
+            writeBuffer.writeString(authPlugin.getDefaultPlugin());
+            writeBuffer.writeByte((byte) 0);
+        }
+    }
 
     public int send(final OutputStream os) throws IOException {
         os.write(writeBuffer.getLengthWithPacketSeq(packetSeq));
-        os.write(writeBuffer.getBuffer(),0,writeBuffer.getLength());
+        os.write(writeBuffer.getBuffer(), 0, writeBuffer.getLength());
         os.flush();
         return 1;
     }

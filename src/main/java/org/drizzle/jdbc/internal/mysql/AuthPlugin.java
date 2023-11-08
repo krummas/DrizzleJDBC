@@ -1,7 +1,7 @@
 /*
  * Drizzle-JDBC
  *
- * Copyright (c) 2009-2011, Marcus Eriksson
+ * Copyright (c) 2009-2019, Marcus Eriksson, Stephane Giron, Marc Isambart, Trond Norbye
  *
  * All rights reserved.
  *
@@ -21,42 +21,27 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
  * TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-                         
-package org.drizzle.jdbc.internal.common.query;
+package org.drizzle.jdbc.internal.mysql;
 
-import java.util.concurrent.ConcurrentHashMap;
+import java.io.IOException;
 
-/**
- * . User: marcuse Date: Mar 18, 2009 Time: 10:14:27 PM
- */
-public class DrizzleQueryFactory implements QueryFactory {
-    private static final ConcurrentHashMap<String, ParameterizedQuery> PREPARED_CACHE = new ConcurrentHashMap<String, ParameterizedQuery>();
-    public Query createQuery(final String query) {
-        return new DrizzleQuery(query);
-    }
-    
-    public DrizzleQuery createQuery(byte[] query)
-    {
-        return new DrizzleQuery(query);
-    }
-    public ParameterizedQuery createParameterizedQuery(final String query, boolean noCache) {
+import org.drizzle.jdbc.internal.common.QueryException;
+import org.drizzle.jdbc.internal.common.packet.RawPacket;
 
-        if(noCache)
-            return new DrizzleParameterizedQuery(query);
+public interface AuthPlugin {
+    /**
+     * Authenticates using this plugin.
+     * 
+     * @param protocol 
+     * @return
+     * @throws IOException
+     * @throws QueryException
+     */
+    public RawPacket authenticate(MySQLProtocol protocol) throws IOException, QueryException;
 
-        // Cache prepared statements
-        ParameterizedQuery pq = DrizzleQueryFactory.PREPARED_CACHE.get(query);
+    public byte[] getEncodedPassword(String password, boolean ssl);
 
-        if(pq == null) {
-            pq = new DrizzleParameterizedQuery(query);
-            DrizzleQueryFactory.PREPARED_CACHE.put(query, pq);
-            return pq;
-        } else {
-            return new DrizzleParameterizedQuery(pq);
-        }
-    }
+    public String getDefaultPlugin();
 
-    public ParameterizedQuery createParameterizedQuery(final ParameterizedQuery dQuery) {
-        return new DrizzleParameterizedQuery(dQuery);
-    }
+    public RawPacket readAuthMoreData(RawPacket rp, MySQLProtocol protocol)throws IOException, QueryException;
 }

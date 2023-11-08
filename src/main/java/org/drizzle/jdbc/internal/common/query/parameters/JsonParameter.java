@@ -21,42 +21,35 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
  * TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-                         
-package org.drizzle.jdbc.internal.common.query;
 
-import java.util.concurrent.ConcurrentHashMap;
+package org.drizzle.jdbc.internal.common.query.parameters;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 
 /**
- * . User: marcuse Date: Mar 18, 2009 Time: 10:14:27 PM
+ * User: marcuse Date: Feb 18, 2009 Time: 10:17:14 PM
  */
-public class DrizzleQueryFactory implements QueryFactory {
-    private static final ConcurrentHashMap<String, ParameterizedQuery> PREPARED_CACHE = new ConcurrentHashMap<String, ParameterizedQuery>();
-    public Query createQuery(final String query) {
-        return new DrizzleQuery(query);
-    }
-    
-    public DrizzleQuery createQuery(byte[] query)
-    {
-        return new DrizzleQuery(query);
-    }
-    public ParameterizedQuery createParameterizedQuery(final String query, boolean noCache) {
+public class JsonParameter implements ParameterHolder {
+    private final byte[] byteRepresentation;
 
-        if(noCache)
-            return new DrizzleParameterizedQuery(query);
-
-        // Cache prepared statements
-        ParameterizedQuery pq = DrizzleQueryFactory.PREPARED_CACHE.get(query);
-
-        if(pq == null) {
-            pq = new DrizzleParameterizedQuery(query);
-            DrizzleQueryFactory.PREPARED_CACHE.put(query, pq);
-            return pq;
-        } else {
-            return new DrizzleParameterizedQuery(pq);
+    public JsonParameter(final String parameter) {
+		final String tempParam = parameter;
+        try {
+            this.byteRepresentation = tempParam.getBytes("UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException("Unsupported encoding: " + e.getMessage(), e);
         }
     }
 
-    public ParameterizedQuery createParameterizedQuery(final ParameterizedQuery dQuery) {
-        return new DrizzleParameterizedQuery(dQuery);
+    public int writeTo(final OutputStream os, int offset, int maxWriteSize) throws IOException {
+        int bytesToWrite = Math.min(byteRepresentation.length - offset, maxWriteSize);
+        os.write(byteRepresentation, offset, bytesToWrite);
+        return bytesToWrite;
+    }
+
+    public long length() {
+        return byteRepresentation.length;
     }
 }

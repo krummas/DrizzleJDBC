@@ -183,7 +183,7 @@ public interface Protocol {
      * @return a list of query results
      * @throws QueryException if there is a problem
      */
-    public List<QueryResult> executeBatch() throws QueryException;
+    public int[] executeBatch() throws QueryException;
 
     /**
      * clears the current batch
@@ -232,4 +232,6 @@ public interface Protocol {
     public String getCatalog() throws QueryException;
     
     public boolean noPrepStmtCache();
+    
+    public boolean isStripQueryComments();
 }
